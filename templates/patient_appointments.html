@@ -1,0 +1,255 @@
+
+{% extends 'base_patient.html' %}
+{% block title %}Appointments{% endblock %}
+
+{% block body %}
+<section class="booking-page">
+    <div class="booking-heading">
+        <div>
+            <h1>Appointments</h1>
+            <p class="muted">Request a visit and keep track of the ones you have.</p>
+        </div>
+    </div>
+
+    {% if followups_due %}
+    <div class="notice followup-alert alert-follow" role="alert">
+        <h2>You have a follow-up on schedule</h2>
+        <p class="muted">Your clinic has scheduled a follow-up or prescription review. Please review the date and acknowledge it below.</p>
+        {% for f in followups_due %}
+        <div class="notice-item">
+            <strong>{{ f.type }}</strong>
+            <span>{{ f.date }} · {{ f.time }}</span>
+            <span>{{ f.branch_name or 'Clinic branch' }}</span>
+            <span class="badge {{ f.status }}">{{ f.status }}</span>
+            <form method="post" action="{{ url_for('patient_appointment_action', aid=f.id, action='comply') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="btn primary btn-small">Comply / acknowledge follow-up</button>
+            </form>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if missed_rows %}
+    <div class="notice missed-appointment-alert alert-missed" role="alert">
+        <h2>You missed a visit</h2>
+        <p class="muted">Choose to reschedule or dismiss the missed appointment. The original record will remain in your history.</p>
+        {% for m in missed_rows %}
+        <div class="notice-item">
+            <strong>{{ m.type }}</strong><span>{{ m.date }} · {{ m.time }}</span>
+            <span class="badge {{ m.status }}">{{ m.status }}</span>
+            <div class="row-actions">
+                <form method="post" action="{{ url_for('patient_appointment_action', aid=m.id, action='reschedule') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button class="btn primary btn-small">Comply / reschedule</button>
+                </form>
+                <form method="post" action="{{ url_for('patient_appointment_action', aid=m.id, action='dismiss') }}" data-confirm="Dismiss this missed appointment? The original record will be kept in your history.">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button class="btn btn-small">Dismiss appointment</button>
+                </form>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if active_appointment %}
+    <div class="notice active-booking-notice" role="status">
+        <h2>You already have an active appointment request</h2>
+        <p>Your transaction is saved. To prevent duplicate bookings, you cannot submit another appointment while this one is active.</p>
+        <div class="active-booking-summary"><strong>{{ active_appointment.type }}</strong><span>{{ active_appointment.date }} · {{ active_appointment.time }}</span><span>{{ active_appointment.branch_name or 'Clinic branch' }}</span><span class="badge {{ active_appointment.status }}">{{ active_appointment.status }}</span></div>
+        <p class="muted small">If you need to change this booking, please contact the clinic. You can request another appointment after this one is cancelled, rejected, or completed.</p>
+    </div>
+    {% else %}
+    <div class="booking-layout">
+        <div class="booking-main">
+            <form method="post" class="booking-card" id="bookingForm">
+                <input type="hidden" name="csrf_token"
+                       value="{{ csrf_token() }}">
+
+                <div class="booking-section-title">
+                    <div>
+                        <h2>Clinic</h2>
+                        <p class="muted">Which branch do you want to visit?</p>
+                    </div>
+                </div>
+
+                <label for="branch_id">Clinic branch</label>
+                <select name="branch_id" id="branch_id" required>
+                    <option value="">Choose a branch</option>
+                    {% for branch in branches %}
+                    <option value="{{ branch.id }}">
+                        {{ branch.name }}{% if branch.address %} — {{ branch.address }}{% endif %}
+                    </option>
+                    {% endfor %}
+                </select>
+
+                <div class="booking-section-title calendar-title">
+                    <div>
+                        <h2>Date</h2>
+                        <p class="muted">Green days have no listed bookings.</p>
+                    </div>
+                </div>
+
+                <div class="calendar-panel">
+                    <div class="calendar-header">
+                        <button type="button" class="calendar-nav"
+                                id="prevMonth" aria-label="Previous month">‹</button>
+                        <div>
+                            <h3 id="calendarMonth">Month Year</h3>
+                            <p class="muted small" id="calendarHint">
+                                Select an available date
+                            </p>
+                        </div>
+                        <button type="button" class="calendar-nav"
+                                id="nextMonth" aria-label="Next month">›</button>
+                    </div>
+
+                    <div class="calendar-grid calendar-weekdays">
+                        <span>Sun</span><span>Mon</span><span>Tue</span>
+                        <span>Wed</span><span>Thu</span><span>Fri</span>
+                        <span>Sat</span>
+                    </div>
+
+                    <div class="calendar-grid" id="calendarDays"></div>
+
+                                        <div class="calendar-legend calendar-legend-all">
+                        <span class="legend-key"><i class="legend-dot available-dot"></i> No listed bookings</span>
+                        <span class="legend-key"><i class="legend-dot booked-dot"></i> Has bookings</span>
+                        <span class="legend-key"><i class="legend-dot selected-dot"></i> Selected</span>
+                    </div>
+                    <p class="muted small" id="bookedTimes" role="status">Choose a branch to check booked times.</p>
+                </div>
+
+                <input type="hidden" name="date" id="selectedDate" required>
+
+                <div class="selected-date-display" id="selectedDateDisplay">
+                    <div>
+                        <span class="muted small">Selected appointment date</span>
+                        <strong id="selectedDateText">No date selected</strong>
+                    </div>
+                </div>
+
+                <div class="booking-section-title">
+                    <div>
+                        <h2>Details</h2>
+                        <p class="muted">What time, and what for?</p>
+                    </div>
+                </div>
+
+                <div class="booking-form-grid">
+                    <div>
+                        <label for="time">Preferred time</label>
+                        <input type="time" name="time" id="time" required>
+                        <p class="field-hint">Your request is subject to clinic confirmation.</p>
+                    </div>
+
+                    <div>
+                        <label for="type">Reason for visit</label>
+                        <select name="type" id="type" required>
+                            <option>Eye check</option>
+                            <option>Follow-up</option>
+                            <option>Prescription review</option>
+                        </select>
+                    </div>
+
+                    <div class="full-width">
+                        <label for="notes">Additional notes <span class="optional">(optional)</span></label>
+                        <textarea name="notes" id="notes"
+                                  placeholder="Share any details the clinic should know..."></textarea>
+                    </div>
+                </div>
+
+                <div class="booking-footer">
+                    <p class="muted small">
+                        Submitting this form sends a request. Your appointment
+                        is not confirmed until the clinic approves it.
+                    </p>
+                    <button class="btn primary booking-submit" type="submit">
+                        Request appointment <span aria-hidden="true">→</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <aside class="booking-sidebar">
+            <div class="booking-card visit-card">
+                <h2>Your request</h2>
+
+                <div class="summary-item">
+                    <span class="muted small">Clinic branch</span>
+                    <strong id="summaryBranch">Not selected</strong>
+                </div>
+
+                <div class="summary-item">
+                    <span class="muted small">Preferred date</span>
+                    <strong id="summaryDate">Not selected</strong>
+                </div>
+
+                <div class="summary-item">
+                    <span class="muted small">Preferred time</span>
+                    <strong id="summaryTime">Not selected</strong>
+                </div>
+
+                <div class="summary-item">
+                    <span class="muted small">Service</span>
+                    <strong id="summaryType">Eye check</strong>
+                </div>
+
+                <div class="summary-note">
+                    <strong>Before you send</strong>
+                    <p class="muted small">
+                        Your preferred schedule will be reviewed by clinic
+                        staff. Please wait for confirmation before visiting.
+                    </p>
+                </div>
+            </div>
+        </aside>
+    </div>
+    {% endif %}
+
+    <div class="booking-card history-card">
+        <div class="history-heading">
+            <div>
+                <h2>Your appointments</h2>
+                <p class="muted">Past and upcoming.</p>
+            </div>
+            <span class="history-count">{{ rows|length }} record{% if rows|length != 1 %}s{% endif %}</span>
+        </div>
+
+        {% if rows %}
+        <div class="appointment-list">
+            {% for a in rows %}
+            <div class="appointment-row">
+                <div class="appointment-date-block">
+                    <span>{{ a.date }}</span>
+                    <strong>{{ a.time }}</strong>
+                </div>
+                <div class="appointment-details">
+                    <strong>{{ a.type }}</strong>
+                    <span class="muted small">
+                        {{ a.branch_name or 'Branch not specified' }}
+                    </span>
+                </div>
+                <span class="badge {{ a.status }}">{{ a.status }}</span>
+                {% if a.status in ['Missed','Incomplete'] %}
+                <div class="row-actions">
+                    <form method="post" action="{{ url_for('patient_appointment_action', aid=a.id, action='reschedule') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn primary btn-small">Comply / reschedule</button></form>
+                    <form method="post" action="{{ url_for('patient_appointment_action', aid=a.id, action='dismiss') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-small">Dismiss</button></form>
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-appointments">
+            <svg class="icon" aria-hidden="true" style="width:28px;height:28px;color:var(--text-3)"><use href="#i-calendar"/></svg>
+            <h3>No appointments yet</h3>
+            <p class="muted">Your appointment requests will appear here.</p>
+        </div>
+        {% endif %}
+    </div>
+</section>
+
+<script src="{{ url_for('static', filename='js/appointment-calendar.js') }}" defer></script>
+{% endblock %}

@@ -1,0 +1,35 @@
+# Nginx reverse proxy. Save as /etc/nginx/sites-available/hawkeye, symlink into sites-enabled, then:
+#   sudo nginx -t && sudo systemctl reload nginx
+# Get the certificate first:  sudo certbot --nginx -d clinic.example.com   (it fills in the ssl_ lines)
+# Replace clinic.example.com and /opt/hawkeye.
+server {
+    listen 80;
+    server_name clinic.example.com;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl http2;              # works on every Nginx version (newer ones may print a harmless deprecation note)
+    server_name clinic.example.com;
+
+    ssl_certificate     /etc/letsencrypt/live/clinic.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/clinic.example.com/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+
+    client_max_body_size 2m;               # the app itself caps requests at 2 MB
+
+    location /static/ {                    # served directly by Nginx (fast, cacheable)
+        alias /opt/hawkeye/static/;
+        expires 7d;
+        access_log off;
+    }
+
+    location / {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host              $http_host;   # keeps the port if you ever use a non-standard one
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $remote_addr;   # overwrite, never trust a client-sent value
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 60s;
+    }
+}

@@ -1,0 +1,44 @@
+{% extends base %}
+{% block title %}Security{% endblock %}
+{% block body %}
+<div class="section-heading"><div><h1>Security</h1><p class="muted">Protect your account with a second step when you sign in.</p></div></div>
+
+{% if new_codes %}
+<div class="card" style="max-width:560px"><h3>Save your backup codes</h3>
+<p class="muted">Each code works once if you lose your phone. They are shown only now, so store them somewhere safe (a password manager or a printout).</p>
+<ul class="backup-codes">{% for code in new_codes %}<li><code>{{ code }}</code></li>{% endfor %}</ul>
+<p class="muted small">Older backup codes no longer work.</p></div>
+{% endif %}
+
+<div class="card" style="max-width:560px"><h3>Two-step sign-in (authenticator app)</h3>
+{% if mfa_enabled %}
+  <p><span class="badge Active">On</span> You will be asked for a code from your authenticator app each time you sign in. Backup codes left: <b>{{ codes_left }}</b>.</p>
+  <form method="post" action="{{ url_for('mfa_backup_codes') }}" class="sec-form"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label for="code_regen">Make new backup codes</label>
+    <input id="code_regen" name="code" inputmode="text" autocomplete="one-time-code" placeholder="Current code" required>
+    <button class="btn">Make new backup codes</button></form>
+  <form method="post" action="{{ url_for('mfa_disable') }}" class="sec-form"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label for="code_off">Turn off two-step sign-in</label>
+    <input id="code_off" name="code" inputmode="text" autocomplete="one-time-code" placeholder="Current code or backup code" required>
+    <button class="btn danger">Turn off</button></form>
+{% elif setup %}
+  <p class="muted">1. Install an authenticator app (Google Authenticator, Microsoft Authenticator, Authy, 1Password…).<br>2. Add an account {{ 'by scanning the QR code or typing the setup key' if qr else 'using the setup key below' }}.<br>3. Enter the 6-digit code the app shows.</p>
+  {% if qr %}<p><img class="qr" src="{{ qr }}" alt="QR code for your authenticator app" width="200" height="200"></p><div class="qr-actions"><a class="btn" href="{{ qr }}" download="hawkeye-authenticator-qr.svg">Download QR code</a></div>{% endif %}
+  <p class="small muted">{{ 'Can’t scan? Enter this setup key instead' if qr else 'Enter this setup key in your authenticator app (choose “Enter a setup key”, time-based)' }}:</p>
+  <p><code class="setup-key">{{ setup_key }}</code></p>
+  <form method="post" action="{{ url_for('mfa_enable') }}" class="sec-form"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label for="code_on">6-digit code</label>
+    <input id="code_on" name="code" type="text" inputmode="numeric" pattern="[0-9 ]{6,7}" maxlength="7" autocomplete="one-time-code" placeholder="123456" required autofocus>
+    <button class="btn primary">Confirm and turn on</button></form>
+  <form method="post" action="{{ url_for('mfa_cancel') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn">Cancel</button></form>
+{% else %}
+  <p><span class="badge Cancelled">Off</span> Add a second step so a stolen password alone cannot open your account.</p>
+  <form method="post" action="{{ url_for('mfa_start') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn primary">Set up two-step sign-in</button></form>
+{% endif %}
+</div>
+
+{% if u.role == 'Patient' and google_enabled %}
+<div class="card" style="max-width:560px"><h3>Google sign-in</h3>
+<p>{% if google_linked %}<span class="badge Active">Linked</span> You can sign in with “Continue with Google”.{% else %}<span class="badge Cancelled">Not linked</span> Use “Continue with Google” on the sign-in page with <b>{{ u.email }}</b> and it will be linked automatically.{% endif %}</p></div>
+{% endif %}
+{% endblock %}

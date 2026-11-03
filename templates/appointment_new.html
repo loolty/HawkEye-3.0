@@ -1,0 +1,26 @@
+{% extends 'base_staff.html' %}
+{% block title %}Create appointment{% endblock %}
+{% block body %}
+<section class="booking-page">
+  <div class="booking-heading"><div><h1>Create appointment</h1><p class="muted">Schedule a patient visit at their assigned branch.</p></div></div>
+  <form method="post" class="booking-card" id="staffAppointmentForm">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="booking-form-grid">
+      <div class="full-width"><label for="patient_id">Patient</label><select id="patient_id" name="patient_id" required><option value="">Choose a patient</option>{% for patient in patients %}<option value="{{ patient.id }}">{{ patient.name }} · {{ patient.patient_id }}</option>{% endfor %}</select>{% if not patients %}<p class="field-hint">No patients are available for your branch. Add a patient first.</p>{% endif %}</div>
+      <div class="full-width"><label for="doctor_id">Assigned doctor <span class="optional">(optional)</span></label><select id="doctor_id" name="doctor_id"><option value="">Unassigned</option>{% for d in doctors %}<option value="{{ d.id }}" {% if session.role=='Optometrist' and d.id==session.uid %}selected{% endif %}>{{ d.name }}{% if d.branch_name %} · {{ d.branch_name }}{% endif %}</option>{% endfor %}</select></div>
+      <div><label for="date">Appointment date</label><input id="date" name="date" type="date" min="{{ today }}" required></div>
+      <div><label for="time">Appointment time</label><input id="time" name="time" type="time" required></div>
+      <div><label for="type">Reason for visit</label><select id="type" name="type" required><option>Eye check</option><option>Follow-up</option><option>Prescription review</option></select></div>
+      <div class="full-width"><label for="notes">Notes <span class="optional">(optional, max 1,000 characters)</span></label><textarea id="notes" name="notes" maxlength="1000" placeholder="Appointment notes..."></textarea></div>
+    </div>
+    <div class="booking-footer"><p class="muted small">The appointment will be created as pending. Check the patient's branch and existing schedule before saving.</p><button class="btn primary booking-submit" type="submit" {% if not patients %}disabled{% endif %}>Create appointment →</button></div>
+  </form>
+</section>
+<script nonce="{{ csp_nonce() }}">
+document.getElementById('staffAppointmentForm').addEventListener('submit', function(e) {
+  const date = document.getElementById('date').value;
+  const time = document.getElementById('time').value;
+  if (!date || !time || new Date(`${date}T${time}`) <= new Date()) { e.preventDefault(); alert('Choose a future date and time.'); }
+});
+</script>
+{% endblock %}

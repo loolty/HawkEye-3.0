@@ -1,0 +1,7 @@
+# Caddy: simplest way to get automatic HTTPS (works on Windows and Linux).
+# Install Caddy, put this in a file named "Caddyfile", replace the domain, run:  caddy run
+# Caddy fetches and renews the certificate by itself. Needs ports 80 and 443 reachable from the internet.
+clinic.example.com {
+    encode gzip
+    reverse_proxy 127.0.0.1:8000
+}

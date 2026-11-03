@@ -1,0 +1,21 @@
+# Exact versions this project was built and tested with (reproducible installs).
+Flask==3.1.3
+Werkzeug==3.1.9
+python-dotenv==1.2.4
+APScheduler==3.11.3
+Flask-WTF==1.3.0
+mysql-connector-python==9.7.0
+blinker==1.9.0
+click==8.5.0
+itsdangerous==2.2.0
+Jinja2==3.1.6
+MarkupSafe==3.0.4
+tzlocal==5.4.5
+WTForms==3.2.2
+
+# Optional: draws the QR code on the two-step sign-in setup page. Without it the page shows the setup key to type in.
+segno>=1.6,<2
+
+# Production web servers (used instead of "python app.py")
+waitress==3.0.2                          # Windows or Linux
+gunicorn==26.2.0 ; sys_platform != "win32"   # Linux

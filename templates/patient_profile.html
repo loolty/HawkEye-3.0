@@ -1,0 +1,21 @@
+{% extends 'base_patient.html' %}
+{% block title %}Profile{% endblock %}
+{% block body %}
+<div class="page-intro"><h1>Profile</h1></div>
+<section class="card" aria-labelledby="acct">
+  <h2 id="acct">{{p.name}}</h2>
+  <div class="rx-meta"><span>Patient ID <b>{{p.patient_id}}</b></span><span>Birthdate <b>{{p.birthdate or 'not recorded'}}</b></span></div>
+  <p class="muted" style="margin:0">Contact the clinic to change your name or birthdate.</p>
+</section>
+<section class="card" aria-labelledby="contact">
+  <h2 id="contact">Contact details</h2>
+  <form method="post" class="form2"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div><label for="phone">Contact number</label><input id="phone" name="phone" value="{{p.phone or ''}}" autocomplete="tel"></div>
+    <div><label for="email">Email</label><input id="email" name="email" type="email" value="{{p.email or ''}}" readonly aria-describedby="email-hint"><p class="field-hint" id="email-hint">Your sign-in email can’t be edited here.</p></div>
+    <div class="wide"><label for="address">Address</label><textarea id="address" name="address" autocomplete="street-address">{{p.address or ''}}</textarea></div>
+    <div class="wide"><label for="channel">How should we remind you?</label><select id="channel" name="channel"><option {{'selected' if p.channel=='SMS'}}>SMS</option><option {{'selected' if p.channel=='Email'}}>Email</option></select></div>
+    <button class="btn primary">Save contact details</button>
+  </form>
+</section>
+<form class="inline-form" method="post" action="{{url_for('logout')}}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn" type="submit">Sign out</button></form>
+{% endblock %}

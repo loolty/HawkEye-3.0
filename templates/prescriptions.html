@@ -1,0 +1,3 @@
+{% extends 'base_staff.html' %}
+{% block title %}Prescriptions{% endblock %}
+{% block body %}<div class="section-heading"><div><h1>Prescriptions</h1></div></div><div class="card"><table><tr><th>Patient</th><th>Patient ID</th><th>Date recorded</th><th>Reference</th><th>Action</th></tr>{% for x in rows %}<tr><td>{{x.name}}</td><td>{{x.code}}</td><td>{{x.recorded}}</td><td>{{x.reference}}</td><td><a class="btn" href="{{url_for('prescription',pid=x.patient_id)}}">View / Add</a></td></tr>{% endfor %}</table></div>{% endblock %}

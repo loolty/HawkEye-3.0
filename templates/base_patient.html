@@ -1,0 +1,26 @@
+<!doctype html>
+{% set ep = request.endpoint %}
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>{% block title %}Patient portal{% endblock %} · HawkEye Optical Clinic</title><link rel="stylesheet" href="{{url_for('static',filename='css/style.css')}}"><link rel="stylesheet" href="{{url_for('static',filename='css/chat.css')}}">{% include '_favicon.html' %}{% include '_theme.html' %}<script src="{{url_for('static',filename='js/ui.js')}}" defer></script></head>
+<body class="app-patient">{% include '_icons.html' %}
+<header class="patient-head">
+  <div class="top">
+    <a class="brand-lockup" href="{{url_for('patient_home')}}" aria-label="HawkEye Optical Clinic, home"><img class="logo-mark logo-light" src="{{ url_for('static', filename='img/hawkeyes-mark.png') }}" alt=""><img class="logo-mark logo-dark" src="{{ url_for('static', filename='img/hawkeyes-mark-dark.png') }}" alt="" aria-hidden="true"><span class="brand-name">HawkEye<small>Optical Clinic</small></span></a>
+    <div class="who"><b>{{p.name}}</b>{{p.patient_id}}</div>
+    {% with tt='' %}{% include '_theme_toggle.html' %}{% endwith %}
+  </div>
+  <nav class="patientnav" aria-label="Patient portal">
+    <a href="{{url_for('patient_home')}}"{% if ep=='patient_home' %} aria-current="page"{% endif %}>Home</a>
+    <a href="{{url_for('patient_appointments')}}"{% if ep=='patient_appointments' %} aria-current="page"{% endif %}>Appointments</a>
+    <a href="{{url_for('patient_prescription')}}"{% if ep=='patient_prescription' %} aria-current="page"{% endif %}>My prescription</a>
+    <a href="{{url_for('patient_reminders')}}"{% if ep=='patient_reminders' %} aria-current="page"{% endif %}>Reminders{% if reminder_unread %}<span class="navbadge">{{reminder_unread}}</span>{% endif %}</a>
+    <a href="{{url_for('patient_chat')}}"{% if ep=='patient_chat' %} aria-current="page"{% endif %}>Messages{% if chat_unread %}<span class="navbadge">{{chat_unread}}</span>{% endif %}</a>
+    <a href="{{url_for('patient_profile')}}"{% if ep=='patient_profile' %} aria-current="page"{% endif %}>Profile</a>
+    <a href="{{url_for('account_security')}}"{% if ep=='account_security' %} aria-current="page"{% endif %}>Security</a>
+  </nav>
+</header>
+<main class="patient" id="main">
+{% with ms=get_flashed_messages(with_categories=true) %}{% for cat,m in ms %}<div class="flash {{cat}}">{{m}}</div>{% endfor %}{% endwith %}
+{% block body %}{% endblock %}
+<p class="foot-note">HawkEye Optical Clinic · Clinic operations support. This system does not diagnose, prescribe or verify clinical accuracy.</p>
+</main>
+</body></html>

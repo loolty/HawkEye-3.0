@@ -1,0 +1,7 @@
+{% extends 'base_staff.html' %}
+{% block title %}Confirm user removal{% endblock %}
+{% block body %}<h1>Confirm user removal</h1>
+<p class="muted">For security, enter the 6-digit code we emailed to your admin address. It expires in 10 minutes.</p>
+<div class="card"><p>You are about to permanently remove <strong>{{ target.name }}</strong> ({{ target.email }}, {{ target.role }}).</p>
+<form method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><label for="code">Confirmation code</label><input id="code" name="code" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" minlength="6" autocomplete="one-time-code" placeholder="123456" required autofocus><br><br><button class="btn danger" type="submit">Confirm removal</button></form>
+<form method="post" action="{{ url_for('cancel_user_removal') }}" style="margin-top:10px"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn" type="submit">Cancel</button></form></div>{% endblock %}

@@ -1,0 +1,84 @@
+/* =====================================================================
+   HawkEye Optical Clinic — design tokens
+   Layer 1  primitives   (raw values, never used by components)
+   Layer 2  semantic     (what a colour is for; themes swap these)
+   Layer 3  component    (live next to their component in style.css)
+   Theme is set by data-theme on <html> (see templates/_theme.html).
+   ===================================================================== */
+
+/* One typeface, self-hosted (CSP allows font-src 'self' only). Two weights on purpose:
+   regular for reading, bold for anything that must be found. Licence: static/fonts/OFL.txt */
+@font-face{font-family:"Instrument Sans";font-weight:400;font-style:normal;font-display:swap;src:url("../fonts/InstrumentSans-Regular.woff") format("woff")}
+@font-face{font-family:"Instrument Sans";font-weight:700;font-style:normal;font-display:swap;src:url("../fonts/InstrumentSans-Bold.woff") format("woff")}
+
+:root{
+  /* ---- primitives: ink (cool slate) ---- */
+  --ink-950:#12151a; --ink-900:#1a1e25; --ink-800:#262b34; --ink-700:#3a404b;
+  --ink-600:#565d6a; --ink-500:#6b7280; --ink-400:#9aa0ab; --ink-300:#c9ced6;
+  --ink-200:#dfe2e7; --ink-100:#ebedf0; --ink-050:#f4f5f7; --white:#ffffff;
+  /* ---- primitives: hawk red (sampled from the logo, #ed2b20) ---- */
+  --hawk-700:#9f1a13; --hawk-600:#c8231a; --hawk-500:#ed2b20; --hawk-300:#ff6a5f;
+  --hawk-100:#fde4e1; --hawk-050:#fff3f1;
+  /* ---- primitives: status ---- */
+  --green-700:#1b6e47; --green-100:#e1f3e9; --green-300:#57c58d;
+  --amber-700:#7c4f00; --amber-100:#fbeecb; --amber-300:#f0b84a;
+
+  /* ---- primitives: type scale (fixed rem steps ~1.15, product UI) ---- */
+  --font:"Instrument Sans",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  --fs-xs:.75rem;   /* 12 */
+  --fs-sm:.8125rem; /* 13 */
+  --fs-md:.9375rem; /* 15 body in staff */
+  --fs-lg:1.0625rem;/* 17 */
+  --fs-xl:1.375rem; /* 22 */
+  --fs-2xl:1.75rem; /* 28 page title */
+  --fs-3xl:2.5rem;  /* 40 patient display */
+  /* ---- primitives: space (4px base), radius, motion ---- */
+  --s-1:4px; --s-2:8px; --s-3:12px; --s-4:16px; --s-5:24px; --s-6:32px; --s-7:48px; --s-8:72px;
+  --r-1:6px;   /* controls */
+  --r-2:10px;  /* panels */
+  --ease:cubic-bezier(.2,.7,.2,1); --t-fast:.14s; --t-med:.22s;
+
+  /* ---- semantic: light theme ---- */
+  color-scheme:light;
+  --canvas:#f4f5f7;          /* page */
+  --surface:#ffffff;         /* panels, tables, inputs */
+  --surface-2:#ebedf0;       /* sidebar / second neutral layer */
+  --sunken:#f4f5f7;          /* wells inside a panel, hover rows */
+  --line:#dfe2e7;            /* the one border colour */
+  --line-strong:#c9ced6;     /* inputs, outlined buttons */
+  --text:#12151a;
+  --text-2:#565d6a;          /* secondary, 6:1 on white */
+  --text-3:#6b7280;          /* tertiary, placeholders (4.8:1) */
+  --accent:#c8231a;          /* hawk red as the action colour (5.7:1 with white) */
+  --accent-hover:#a91d15;
+  --accent-text:#b01f17;     /* red used as text/links on surfaces */
+  --on-accent:#ffffff;
+  --accent-tint:#fff3f1;
+  --accent-line:#f3b9b4;
+  --mark:#ed2b20;            /* the logo's own red; marks and indicators only */
+  --focus:#c8231a;
+  --ok:#1b6e47;   --ok-tint:#e1f3e9;   --ok-line:#a8dbc0;
+  --warn:#7c4f00; --warn-tint:#fbeecb; --warn-line:#e8cd8a;
+  --bad:#a91d15;  --bad-tint:#fde4e1;  --bad-line:#f3b9b4;
+  --neutral:#565d6a;
+  --ink-solid:#12151a;       /* dark field used by the eye-chart panel */
+  --ink-solid-text:#f4f5f7;
+  --scrim:rgba(18,21,26,.45);
+  --selection:#fcd3cf;
+  --shadow-float:0 8px 28px rgba(18,21,26,.16),0 1px 3px rgba(18,21,26,.12); /* only on things that float */
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --canvas:#0e1115; --surface:#161a20; --surface-2:#12151a; --sunken:#1b2027;
+  --line:#272d36; --line-strong:#3a424e;
+  --text:#e9ebef; --text-2:#a0a7b3; --text-3:#8b93a0;
+  --accent:#ff6a5f; --accent-hover:#ff857c; --accent-text:#ff8a80; --on-accent:#14080a;
+  --accent-tint:#2a1614; --accent-line:#6a2b27; --mark:#ff4d41; --focus:#ff8a80;
+  --ok:#6fd3a2;   --ok-tint:#12261d;   --ok-line:#2a5a43;
+  --warn:#f0c46a; --warn-tint:#2a2010; --warn-line:#5f4a1c;
+  --bad:#ff8a80;  --bad-tint:#2a1614;  --bad-line:#6a2b27;
+  --neutral:#a0a7b3;
+  --ink-solid:#263042; --ink-solid-text:#e9ebef;
+  --scrim:rgba(0,0,0,.6); --selection:#5a2420;
+  --shadow-float:0 8px 28px rgba(0,0,0,.5),0 1px 3px rgba(0,0,0,.4);
+}

@@ -1,0 +1,59 @@
+{% extends 'base_staff.html' %}
+{% block title %}Prescription history{% endblock %}
+{% block body %}
+<div class="section-heading">
+  <div>
+    <h1>Prescription history</h1>
+    <p class="muted">View previous prescriptions and edit an individual record. Changes to notes are saved with the selected prescription.</p>
+  </div>
+  <div class="actions">
+    <a class="btn" href="{{ url_for('patients') }}">Back to patients</a>
+    <a class="btn primary" href="{{ url_for('prescription', pid=p.id, new=1) }}"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg>New prescription</a>
+  </div>
+</div>
+<div class="card">
+  <h3>{{ p.name }}</h3>
+  <p class="muted">{{ p.patient_id }} · {{ p.birthdate or 'Birthdate not recorded' }} · {{ p.phone or 'No phone recorded' }}</p>
+</div>
+<div class="card">
+  <h3>{% if rx %}{{ 'Edit prescription' if editing else 'Latest prescription' }}{% else %}New prescription{% endif %}</h3>
+  {% if session.role in ['Admin','Optometrist'] %}
+  <form method="post" action="{{ url_for('prescription', pid=p.id, edit=rx.id) if editing else url_for('prescription', pid=p.id, new=1) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="rx_id" value="{{ rx.id if editing else '' }}">
+    <div class="form2">
+      <div><label>Date recorded</label><input type="date" name="recorded" required value="{{ rx.recorded if rx else today }}"></div>
+      <div><label>Optometrist</label><input name="optometrist" value="{{ rx.optometrist if rx else session.name }}"></div>
+      {% for eye in ['od','os'] %}
+      <div class="wide"><b>{{ 'OD · Right eye' if eye=='od' else 'OS · Left eye' }}</b></div>
+      {% for field in ['sphere','cylinder','axis','add','pd'] %}
+      <div><label>{{ field|title }}</label><input name="{{ eye }}_{{ field }}" value="{{ rx[eye+'_'+field] if rx else '' }}"></div>
+      {% endfor %}
+      {% endfor %}
+      <div class="wide"><label>Record notes</label><textarea name="notes" rows="4" placeholder="Enter prescription notes here">{{ rx.notes if rx else '' }}</textarea><p class="muted small">Notes are saved when you submit this form.</p></div>
+      <div><label>Recommended return date</label><input type="date" name="return_date" value="{{ rx.return_date if rx else '' }}"></div>
+      <div><label>Record reference</label><input name="reference" value="{{ rx.reference if rx else 'RX-NEW' }}"></div>
+    </div>
+    <br><button class="btn primary">{{ 'Update prescription' if editing else ('Save new prescription' if not rx else 'Save changes') }}</button>
+    {% if editing %}<a class="btn" href="{{ url_for('prescription', pid=p.id) }}">Cancel edit</a>{% endif %}
+  </form>
+  {% else %}
+  <p class="muted">Only an optometrist or administrator can add or edit prescription records.</p>
+  {% endif %}
+</div>
+<div class="card">
+  <div class="section-heading"><div><h3>Prescription history log</h3><p class="muted small">Each row is a saved record for this patient.</p></div></div>
+  <div class="table-wrap"><table class="sortable-table">
+    <thead><tr><th>Date</th><th>Optometrist</th><th>Reference</th><th>Return date</th><th>Notes</th><th>Action</th></tr></thead>
+    <tbody>
+    {% for h in hist %}
+      <tr>
+        <td>{{ h.recorded }}</td><td>{{ h.optometrist or '—' }}</td><td>{{ h.reference or '—' }}</td>
+        <td>{{ h.return_date or '—' }}</td><td>{{ h.notes or '—' }}</td>
+        <td><a class="btn btn-small" href="{{ url_for('prescription', pid=p.id, edit=h.id) }}">View / edit</a></td>
+      </tr>
+    {% else %}<tr><td colspan="6" class="empty-cell">No prescriptions have been recorded for this patient.</td></tr>{% endfor %}
+    </tbody>
+  </table></div>
+</div>
+{% endblock %}

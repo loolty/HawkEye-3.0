@@ -1,0 +1,33 @@
+{% extends 'base_patient.html' %}
+{% block title %}My prescription{% endblock %}
+{% block body %}
+<div class="page-intro">
+  <h1>My prescription</h1>
+  <p class="muted">Read only. To change anything, contact the clinic.</p>
+</div>
+{% if rows %}{% set rx=rows[0] %}
+<section class="card" aria-labelledby="latest">
+  <h2 id="latest">Latest prescription</h2>
+  <div class="rx-meta"><span>Recorded <b>{{rx.recorded}}</b></span><span>By <b>{{rx.optometrist}}</b></span>{% if rx.reference %}<span>Reference <b>{{rx.reference}}</b></span>{% endif %}</div>
+  <div class="table-wrap"><table class="rx">
+    <thead><tr><th scope="col">Eye</th><th scope="col">Sphere</th><th scope="col">Cylinder</th><th scope="col">Axis</th><th scope="col">Add</th><th scope="col">PD</th></tr></thead>
+    <tbody>
+      <tr><td>Right eye<small>OD</small></td><td>{{rx.od_sphere or '–'}}</td><td>{{rx.od_cylinder or '–'}}</td><td>{{rx.od_axis or '–'}}</td><td>{{rx.od_add or '–'}}</td><td>{{rx.od_pd or '–'}}</td></tr>
+      <tr><td>Left eye<small>OS</small></td><td>{{rx.os_sphere or '–'}}</td><td>{{rx.os_cylinder or '–'}}</td><td>{{rx.os_axis or '–'}}</td><td>{{rx.os_add or '–'}}</td><td>{{rx.os_pd or '–'}}</td></tr>
+    </tbody>
+  </table></div>
+</section>
+<section class="card" aria-labelledby="ret">
+  <h3 id="ret">Recommended return</h3>
+  <div class="return-date"><strong>{{rx.return_date or 'Not set'}}</strong>{% if rx.return_date %}<span class="muted">Book this visit from Appointments.</span>{% endif %}</div>
+</section>
+{% else %}
+<section class="card empty-state"><svg class="icon" aria-hidden="true"><use href="#i-rx"/></svg><h3>No prescription on file</h3><p>Once your optometrist records one, it appears here.</p></section>
+{% endif %}
+{% if rows|length > 1 %}
+<section class="card" aria-labelledby="hist">
+  <h3 id="hist">History</h3>
+  <div class="table-wrap"><table style="min-width:0"><thead><tr><th>Date</th><th>Optometrist</th><th>Reference</th></tr></thead><tbody>{% for x in rows %}<tr><td>{{x.recorded}}</td><td>{{x.optometrist}}</td><td>{{x.reference}}</td></tr>{% endfor %}</tbody></table></div>
+</section>
+{% endif %}
+{% endblock %}

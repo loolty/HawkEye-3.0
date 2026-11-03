@@ -1,0 +1,45 @@
+<!doctype html>
+{% set ep = request.endpoint %}
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>{% block title %}Staff workspace{% endblock %} · HawkEye Optical Clinic</title><link rel="stylesheet" href="{{url_for('static',filename='css/style.css')}}"><link rel="stylesheet" href="{{url_for('static',filename='css/chat.css')}}">{% include '_favicon.html' %}{% include '_theme.html' %}<script src="{{url_for('static',filename='js/ui.js')}}" defer></script></head>
+<body class="app-staff">{% include '_icons.html' %}
+<div class="layout">
+<aside class="side">
+  <div class="side-brand">{% include '_brand.html' %}</div>
+  <button type="button" class="menu-btn" data-menu-toggle aria-expanded="false" aria-controls="staff-menu"><svg class="icon i-open" aria-hidden="true"><use href="#i-menu"/></svg><svg class="icon i-close" aria-hidden="true"><use href="#i-x"/></svg><span class="menu-label">Menu</span><span class="navbadge" data-chat-badge data-state="{{url_for('api_staff_chat_state')}}" {% if not chat_unread %}hidden{% endif %}>{{chat_unread}}</span></button>
+  <div class="side-panel" id="staff-menu">
+  <nav class="nav" aria-label="Staff">
+    <div class="nav-group">Front desk</div>
+    <a href="{{url_for('dashboard')}}"{% if ep=='dashboard' %} aria-current="page"{% endif %}><svg class="icon" aria-hidden="true"><use href="#i-home"/></svg>Dashboard</a>
+    <a href="{{url_for('patients')}}"{% if ep in ['patients','patient_edit','prescription','prescriptions'] %} aria-current="page"{% endif %}><svg class="icon" aria-hidden="true"><use href="#i-users"/></svg>Patients</a>
+    <a href="{{url_for('walk_in')}}"{% if ep=='walk_in' %} aria-current="page"{% endif %}><svg class="icon" aria-hidden="true"><use href="#i-user-plus"/></svg>Add walk-in</a>
+    <a href="{{url_for('appointments')}}"{% if ep in ['appointments','appointment_new'] %} aria-current="page"{% endif %}><svg class="icon" aria-hidden="true"><use href="#i-calendar"/></svg>Appointments</a>
+    <div class="nav-group">Clinic</div>
+    <a href="{{url_for('doctor_schedule')}}"{% if ep=='doctor_schedule' %} aria-current="page"{% endif %}><svg class="icon" aria-hidden="true"><use href="#i-clock"/></svg>{% if session.role=='Optometrist' %}My schedule{% else %}Doctor schedule{% endif %}</a>
+    <a href="{{url_for('followups')}}"{% if ep=='followups' %} aria-current="page"{% endif %}><svg class="icon" aria-hidden="true"><use href="#i-repeat"/></svg>Follow-ups</a>
+    <a href="{{url_for('reminders')}}"{% if ep=='reminders' %} aria-current="page"{% endif %}><svg class="icon" aria-hidden="true"><use href="#i-bell"/></svg>Reminders</a>
+    <a href="{{url_for('staff_chat')}}"{% if ep=='staff_chat' %} aria-current="page"{% endif %}><svg class="icon" aria-hidden="true"><use href="#i-message"/></svg>Clinic chat<span class="navbadge" data-chat-badge data-state="{{url_for('api_staff_chat_state')}}" {% if not chat_unread %}hidden{% endif %}>{{chat_unread}}</span></a>
+    <a href="{{url_for('reports')}}"{% if ep=='reports' %} aria-current="page"{% endif %}><svg class="icon" aria-hidden="true"><use href="#i-chart"/></svg>Reports</a>
+    {% if session.role=='Admin' %}
+    <div class="nav-group">Admin</div>
+    <a href="{{url_for('users')}}"{% if ep in ['users','change_user_email','request_user_removal'] %} aria-current="page"{% endif %}><svg class="icon" aria-hidden="true"><use href="#i-shield"/></svg>User management</a>
+    <a href="{{url_for('branches')}}"{% if ep=='branches' %} aria-current="page"{% endif %}><svg class="icon" aria-hidden="true"><use href="#i-building"/></svg>Branches</a>
+    {% endif %}
+  </nav>
+  <div class="side-user">
+    <div class="side-user-row"><span class="avatar" aria-hidden="true">{{ (session.name or '?')[:1]|upper }}</span><div><b>{{session.name}}</b><span class="muted">{{session.role}}</span></div>{% with tt='' %}{% include '_theme_toggle.html' %}{% endwith %}</div>
+    <div class="side-links">
+      <a class="btn" href="{{url_for('account_security')}}"{% if ep in ['account_security'] %} aria-current="page"{% endif %}><svg class="icon" aria-hidden="true"><use href="#i-shield"/></svg>Security</a>
+      <a class="btn" href="{{url_for('staff_change_password')}}"><svg class="icon" aria-hidden="true"><use href="#i-key"/></svg>Change password</a>
+      <form class="inline-form" method="post" action="{{url_for('logout')}}"><button class="btn" type="submit"><svg class="icon" aria-hidden="true"><use href="#i-logout"/></svg>Sign out</button></form>
+    </div>
+  </div>
+  </div>
+</aside>
+<main class="content" id="main">
+{% with ms=get_flashed_messages(with_categories=true) %}{% for cat,m in ms %}<div class="flash {{cat}}">{{m}}</div>{% endfor %}{% endwith %}
+{% block body %}{% endblock %}
+<p class="foot-note">HawkEye Optical Clinic · Clinic operations support. This system does not diagnose, prescribe or verify clinical accuracy.</p>
+<script src="{{url_for('static',filename='js/staff-table-sort.js')}}"></script><script src="{{url_for('static',filename='js/chat.js')}}"></script>
+</main>
+</div>
+</body></html>

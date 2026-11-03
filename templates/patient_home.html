@@ -1,0 +1,55 @@
+{% extends 'base_patient.html' %}{% from '_macros.html' import day_num, month_year %}
+{% block title %}Home{% endblock %}
+{% block body %}
+<div class="page-intro">
+  <h1>Hello, {{ p.name.split(' ')[0] }}.</h1>
+  <p class="muted">Your next visit, your follow-up date and any notes from the clinic.</p>
+</div>
+
+{% if new_reminders %}
+<section class="notice" aria-labelledby="new-rem">
+  <h2 id="new-rem">New from the clinic</h2>
+  {% for x in new_reminders %}<div class="reminder-item"><p>{{x.message}}</p><span class="muted small">{{x.sent_date}}</span></div>{% endfor %}
+  <p style="margin-top:12px"><a class="btn" href="{{url_for('patient_reminders')}}">View all reminders</a></p>
+</section>
+{% endif %}
+
+{% if a %}
+<section class="card visit" aria-labelledby="next-visit">
+  <div class="visit-date" aria-hidden="true"><b>{{ day_num(a.date) }}</b><span>{{ month_year(a.date) }}</span></div>
+  <div class="visit-info">
+    <h2 id="next-visit">Your next visit: {{a.time}}</h2>
+    <p>{{a.type}} · <span class="badge {{a.status}}">{{a.status}}</span></p>
+    <p>{% if a.status=='Confirmed' %}The clinic has confirmed this time for you.{% else %}Waiting for the clinic to confirm this time.{% endif %}</p>
+  </div>
+  <div class="actions"><a class="btn" href="{{url_for('patient_appointments')}}">View appointment</a></div>
+</section>
+{% else %}
+<section class="card visit empty" aria-labelledby="next-visit">
+  <div class="visit-info">
+    <h2 id="next-visit">No visit booked</h2>
+    <p>Pick a branch, a day and a time. The clinic confirms your request.</p>
+  </div>
+  <div class="actions"><a class="btn primary" href="{{url_for('patient_appointments')}}">Book a visit</a></div>
+</section>
+{% endif %}
+
+<div class="split-2">
+  <section class="card" aria-labelledby="fu">
+    <h3 id="fu">Follow-up</h3>
+    {% if rx and rx.return_date %}
+      <p class="followup-date">{{rx.return_date}}</p>
+      <p class="muted">Return date recorded by the clinic with your latest prescription.</p>
+    {% else %}
+      <p class="muted">No return date has been recorded yet.</p>
+    {% endif %}
+  </section>
+  <section class="card" aria-labelledby="rec">
+    <h3 id="rec" class="sr">Your records</h3>
+    <div class="rows">
+      <a class="row-link" href="{{url_for('patient_prescription')}}"><svg class="icon lg" aria-hidden="true"><use href="#i-rx"/></svg><span class="grow">My prescription<small>Latest values and history</small></span><svg class="icon arrow" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+      <a class="row-link" href="{{url_for('patient_chat')}}"><svg class="icon lg" aria-hidden="true"><use href="#i-message"/></svg><span class="grow">Message the clinic<small>{% if chat_unread %}{{chat_unread}} new {{ 'reply' if chat_unread==1 else 'replies' }}{% else %}Ask about a visit or a follow-up{% endif %}</small></span><svg class="icon arrow" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+    </div>
+  </section>
+</div>
+{% endblock %}

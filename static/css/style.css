@@ -1,0 +1,631 @@
+@import url("tokens.css");
+/* =====================================================================
+   HawkEye Optical Clinic — portal styles (patient + staff)
+   Tokens live in tokens.css. This file holds layer 3: components.
+   Rules of the house: one typeface, one border colour, flat surfaces,
+   red only where something can be acted on or is selected, status as
+   dot + word, numbers in tabular figures, no gradients, no glow.
+   ===================================================================== */
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--canvas);color:var(--text);font-family:var(--font);font-size:var(--fs-md);line-height:1.5;font-weight:400;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+body.app-patient{font-size:var(--fs-lg);line-height:1.55}  /* patients read at 17px: many arrive with vision problems */
+h1,h2,h3,h4{font-family:var(--font);font-weight:700;color:var(--text);margin:0 0 var(--s-2);text-wrap:balance}
+h1{font-size:var(--fs-2xl);line-height:1.15;letter-spacing:-.02em}
+h2{font-size:var(--fs-xl);line-height:1.2;letter-spacing:-.015em}
+h3{font-size:var(--fs-lg);line-height:1.3}
+p{margin:0 0 var(--s-3)}
+a{color:inherit;text-decoration:none}
+.content p a:not(.btn),.patient p a:not(.btn),.auth p a:not(.btn),.flash a,.privacy a,.consent a{color:var(--accent-text);text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1px}
+.muted{color:var(--text-2)}
+.small{font-size:var(--fs-sm)}
+::placeholder{color:var(--text-3);opacity:1}
+::selection{background:var(--selection);color:var(--text)}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:3px}
+.sr{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+html{scrollbar-color:var(--line-strong) transparent}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:var(--line-strong);border-radius:6px;border:2px solid var(--canvas)}
+.icon{width:18px;height:18px;flex:none;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;vertical-align:-3px}
+.icon.lg{width:22px;height:22px}
+table,.stat b,.badge,.appointment-date-block,.sched-time,.calendar-day,input[type=date],input[type=time]{font-variant-numeric:tabular-nums}
+
+/* ---------------- brand ---------------- */
+.brand-lockup{display:inline-flex;align-items:center;gap:12px;color:var(--text)}
+.logo-mark{height:30px;width:auto;display:block;flex:none}
+.brand-name{display:flex;flex-direction:column;font-weight:700;font-size:var(--fs-lg);line-height:1.1;letter-spacing:-.01em}
+.brand-name small{font-weight:400;font-size:var(--fs-sm);color:var(--text-2);letter-spacing:0;margin-top:2px}
+.logo-dark{display:none!important}
+:root[data-theme="dark"] .logo-dark{display:block!important}
+:root[data-theme="dark"] .logo-light{display:none!important}
+
+/* ---------------- buttons ---------------- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:38px;padding:0 16px;border:1px solid var(--line-strong);border-radius:var(--r-1);background:var(--surface);color:var(--text);font:700 var(--fs-md)/1 var(--font);cursor:pointer;white-space:nowrap;transition:background var(--t-fast) var(--ease),border-color var(--t-fast) var(--ease),color var(--t-fast) var(--ease),transform var(--t-fast) var(--ease)}
+.btn:hover{background:var(--sunken);border-color:var(--ink-500)}
+.btn:active{transform:translateY(1px)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.btn.primary:hover{background:var(--accent-hover);border-color:var(--accent-hover)}
+.btn.danger{color:var(--bad);border-color:var(--bad-line);background:transparent}
+.btn.danger:hover{background:var(--bad-tint);border-color:var(--bad)}
+.btn.blue{background:var(--sunken)}
+.btn[disabled],.btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
+.btn-small{min-height:30px;padding:0 10px;font-size:var(--fs-sm)}
+body.app-patient .btn{min-height:46px;padding:0 20px;font-size:var(--fs-lg)}
+body.app-patient .btn-small{min-height:38px;padding:0 14px;font-size:var(--fs-md)}
+.actions{display:flex;gap:var(--s-2);flex-wrap:wrap;align-items:center}
+.inline-form{display:inline;margin:0}
+/* inside tables only the one decision is filled; every other action is quiet text */
+.row-actions{display:flex;gap:2px 4px;flex-wrap:wrap;align-items:center}
+.row-actions form{margin:0;display:inline-flex}
+.row-actions .btn:not(.primary):not(.danger){border-color:transparent;background:transparent;color:var(--text-2);padding:0 8px}
+.row-actions .btn:not(.primary):not(.danger):hover{background:var(--sunken);color:var(--text)}
+.row-actions .btn.danger{border-color:transparent}
+.row-actions .btn.danger:hover{border-color:var(--bad-line)}
+
+/* ---------------- forms ---------------- */
+label{display:block;font-weight:700;font-size:var(--fs-sm);margin:var(--s-4) 0 6px;color:var(--text)}
+body.app-patient label{font-size:var(--fs-md)}
+input,select,textarea{width:100%;min-height:40px;padding:9px 12px;background:var(--surface);color:var(--text);border:1px solid var(--line-strong);border-radius:var(--r-1);font:400 var(--fs-md)/1.4 var(--font);transition:border-color var(--t-fast) var(--ease),box-shadow var(--t-fast) var(--ease)}
+body.app-patient input,body.app-patient select,body.app-patient textarea{min-height:46px;font-size:var(--fs-lg)}
+input:hover,select:hover,textarea:hover{border-color:var(--ink-500)}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--focus);box-shadow:0 0 0 1px var(--focus)}
+input:disabled,select:disabled,textarea:disabled,input[readonly]{background:var(--sunken);color:var(--text-2)}
+textarea{min-height:92px;resize:vertical}
+select{appearance:none;-webkit-appearance:none;padding-right:34px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none' stroke='%23747b88' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 1.5l5 5 5-5'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center}
+input[type=checkbox],input[type=radio]{width:auto;min-height:0;accent-color:var(--accent)}
+input[type=date],input[type=time]{color-scheme:inherit}
+.form2{display:grid;grid-template-columns:1fr 1fr;gap:0 var(--s-5)}
+.form2 .wide,.wide{grid-column:1/-1}
+.form2 button.btn{justify-self:start;margin-top:var(--s-4)}
+.field-hint{margin:6px 0 0;color:var(--text-2);font-size:var(--fs-sm);line-height:1.5}
+.optional{color:var(--text-2);font-weight:400}
+.consent{display:flex;gap:10px;align-items:flex-start;font-weight:400;font-size:var(--fs-sm);margin:var(--s-4) 0 var(--s-1);line-height:1.45}
+.consent input{margin-top:3px;flex:none}
+
+/* ---------------- messages ---------------- */
+.flash,.notice{padding:12px 14px;border-radius:var(--r-1);margin:var(--s-3) 0;background:var(--sunken);border:1px solid var(--line);color:var(--text)}
+.flash.ok{background:var(--ok-tint);border-color:var(--ok-line);color:var(--text)}
+.flash.error{background:var(--bad-tint);border-color:var(--bad-line);color:var(--text)}
+.flash.ok::before,.flash.error::before{font-weight:700;margin-right:6px}
+.flash.ok::before{content:"Done.";color:var(--ok)}
+.flash.error::before{content:"Problem.";color:var(--bad)}
+.notice{padding:var(--s-4) var(--s-5);border-radius:var(--r-2);background:var(--surface);margin:0 0 var(--s-4)}
+.notice h2{font-size:var(--fs-lg);margin-bottom:4px}
+.notice p:last-child{margin-bottom:0}
+.alert-follow{background:var(--warn-tint);border-color:var(--warn-line)}
+.alert-missed{background:var(--bad-tint);border-color:var(--bad-line)}
+.notice-item{display:flex;flex-wrap:wrap;gap:var(--s-2) var(--s-5);align-items:center;margin-top:var(--s-3);padding-top:var(--s-3);border-top:1px solid color-mix(in srgb,var(--text) 14%,transparent)}
+.notice-item .row-actions{margin-left:auto}
+
+/* ---------------- panels ---------------- */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-2);padding:var(--s-5);margin:var(--s-4) 0}
+.card>h3:first-child,.card>.section-heading:first-child h3{margin-top:0}
+.card h3{margin-bottom:4px}
+.card>h3+p.muted,.card>h3+.muted{margin-bottom:var(--s-4)}
+
+/* ---------------- status: dot + word ---------------- */
+.badge{display:inline-flex;align-items:center;gap:7px;padding:0;background:none;border-radius:0;font-weight:700;font-size:var(--fs-sm);color:var(--warn);white-space:nowrap}
+.badge::before{content:"";width:8px;height:8px;border-radius:50%;background:currentColor;flex:none}
+.badge.Confirmed,.badge.Sent,.badge.Attended,.badge.Completed,.badge.Active{color:var(--ok)}
+.badge.Missed,.badge.Failed,.badge.Incomplete{color:var(--bad)}
+.badge.Cancelled,.badge.Rejected,.badge.Ignored,.badge.Dismissed,.badge.Read,.badge.Resolved{color:var(--neutral)}
+.badge.Cancelled::before,.badge.Rejected::before,.badge.Ignored::before,.badge.Dismissed::before,.badge.Read::before{background:none;box-shadow:inset 0 0 0 2px currentColor}
+.new-patient-tag{font-weight:700;font-size:var(--fs-xs);color:var(--accent-text)}
+.navbadge,.ubadge{display:inline-block;min-width:20px;padding:1px 6px;margin-left:8px;border-radius:99px;background:var(--mark);color:#fff;font-size:var(--fs-xs);font-weight:700;text-align:center;line-height:18px;vertical-align:middle}
+.navbadge[hidden],.ubadge[hidden]{display:none}
+
+/* ---------------- tables: rules and alignment ---------------- */
+.table-wrap{width:100%;overflow-x:auto}
+.table-wrap table{min-width:780px}
+table{width:100%;border-collapse:collapse;background:transparent;font-size:var(--fs-md)}
+th{padding:0 var(--s-3) 10px;text-align:left;font-size:var(--fs-sm);font-weight:700;color:var(--text-2);border-bottom:1px solid var(--line-strong);white-space:nowrap}
+td{padding:14px var(--s-3);border-bottom:1px solid var(--line);vertical-align:top}
+th:first-child,td:first-child{padding-left:0}
+th:last-child,td:last-child{padding-right:0}
+tbody tr:last-child td{border-bottom:0}
+tbody tr:hover td{background:var(--sunken)}
+td strong{font-weight:700}
+td .small{margin-top:2px}
+.priority-row td{background:color-mix(in srgb,var(--warn-tint) 60%,transparent)}
+.empty-cell,.empty-state{text-align:center;color:var(--text-2);padding:var(--s-6) var(--s-4)}
+.empty-state h3{margin-bottom:4px;color:var(--text)}
+.empty-state .icon{width:28px;height:28px;color:var(--text-3);margin-bottom:var(--s-2)}
+.table-sortbar{margin:0 0 var(--s-3);gap:var(--s-2)}
+.table-sortbar label{margin:0;font-weight:400;color:var(--text-2)}
+.table-sortbar select{width:auto;min-width:150px;min-height:32px;padding-top:4px;padding-bottom:4px;font-size:var(--fs-sm)}
+
+/* ---------------- page header ---------------- */
+.dashboard-heading,.section-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:var(--s-4);margin:0 0 var(--s-5);flex-wrap:wrap}
+.section-heading{margin-bottom:var(--s-4)}
+.card .section-heading{margin-bottom:var(--s-3)}
+.dashboard-heading h1,.section-heading h1{margin-bottom:4px}
+.dashboard-heading p,.section-heading p{margin:0}
+.dashboard-heading .muted,.section-heading>div>.muted{max-width:62ch}
+
+/* ---------------- figures: numbers set as type, not tiles ---------------- */
+.stats,.dashboard-stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--r-2);overflow:hidden;margin:0 0 var(--s-4)}
+.sched-stats{grid-template-columns:repeat(4,minmax(0,1fr))}
+.stat{background:var(--surface);padding:var(--s-4) var(--s-5);color:var(--text-2);font-size:var(--fs-sm);line-height:1.35}
+.stat b{display:block;font-size:var(--fs-3xl);line-height:1.05;letter-spacing:-.02em;color:var(--text);margin-bottom:6px}
+.stat.hot b{color:var(--accent-text)}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--s-4)}
+
+/* ---------------- auth ---------------- */
+.top{height:64px;border-bottom:1px solid var(--line);background:var(--surface);display:flex;align-items:center;padding:0 var(--s-6);gap:var(--s-4);position:sticky;top:0;z-index:20}
+.top .theme-toggle{margin-left:auto}
+.auth{max-width:440px;margin:var(--s-7) auto var(--s-8);padding:0 var(--s-5)}
+.auth .brand-lockup{margin-bottom:var(--s-6)}
+.auth h1{font-size:var(--fs-2xl);margin-bottom:var(--s-2)}
+.auth>p.muted{margin-bottom:var(--s-5)}
+.auth .card{padding:var(--s-5);margin:var(--s-4) 0}
+.auth .card form>.btn.primary,.auth .card form>button.btn{width:100%;margin-top:var(--s-5)}
+.auth a:not(.btn){color:var(--accent-text);font-weight:700}
+.auth a:not(.btn):hover{text-decoration:underline;text-underline-offset:3px}
+.auth .card p.small{margin:var(--s-4) 0 0}
+.auth-split{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);min-height:100vh}
+.auth-side{background:var(--ink-solid);color:var(--ink-solid-text);padding:var(--s-6) var(--s-7);display:flex;flex-direction:column;justify-content:space-between;gap:var(--s-6);overflow:hidden}
+.auth-side .brand-lockup{color:var(--ink-solid-text)}
+.auth-side .brand-name small{color:#aab2be}
+.auth-side .tagline{font-size:clamp(28px,3vw,44px);line-height:1.08;font-weight:700;letter-spacing:-.03em;max-width:14em;margin:0}
+.auth-side .fine{color:#aab2be;font-size:var(--fs-sm);max-width:36ch;margin:0}
+.chart-mini{display:flex;flex-direction:column;align-items:flex-start;gap:14px;font-weight:700;line-height:1;color:var(--ink-solid-text);user-select:none}
+.chart-mini span{display:block;letter-spacing:.3em;white-space:nowrap}
+.chart-mini .r1{font-size:78px}.chart-mini .r2{font-size:58px}.chart-mini .r3{font-size:42px}.chart-mini .r4{font-size:30px}.chart-mini .r5{font-size:21px;opacity:.9}.chart-mini .r6{font-size:15px;opacity:.8}
+.auth-main{display:flex;flex-direction:column;padding:var(--s-5) var(--s-6)}
+.auth-main .toolbar{display:flex;justify-content:flex-end;min-height:38px}
+.auth-main .auth{margin:auto;width:100%;padding:var(--s-6) 0}
+.auth-main .auth .brand-lockup{display:none}
+.theme-toggle.floating{position:fixed;top:14px;right:14px;z-index:50}
+
+/* ---------------- theme toggle ---------------- */
+.theme-toggle{width:38px;height:38px;flex:none;display:inline-grid;place-items:center;padding:0;border:1px solid var(--line-strong);border-radius:50%;background:var(--surface);color:var(--text-2);cursor:pointer;transition:color var(--t-fast),border-color var(--t-fast)}
+.theme-toggle:hover{color:var(--text);border-color:var(--ink-500)}
+.theme-toggle svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.theme-toggle .i-sun{display:none}
+:root[data-theme="dark"] .theme-toggle .i-sun{display:block}
+:root[data-theme="dark"] .theme-toggle .i-moon{display:none}
+
+/* ---------------- staff shell ---------------- */
+.layout{display:grid;grid-template-columns:244px minmax(0,1fr);min-height:100vh}
+.side{background:var(--surface-2);border-right:1px solid var(--line);padding:var(--s-5) var(--s-3) var(--s-4);position:sticky;top:0;height:100vh;display:flex;flex-direction:column;overflow-y:auto;gap:var(--s-5)}
+.side-panel{display:contents}
+.side-brand{display:block;padding:0 var(--s-2)}
+.side-brand .brand-lockup{gap:10px}
+.side-brand .logo-mark{height:26px}
+.nav{display:flex;flex-direction:column;gap:2px}
+.nav-group{margin:var(--s-4) 0 4px;padding:0 var(--s-3);font-size:var(--fs-sm);color:var(--text-3);font-weight:700}
+.nav-group:first-child{margin-top:0}
+.nav a{display:flex;align-items:center;gap:10px;min-height:38px;padding:0 var(--s-3);border-radius:var(--r-1);color:var(--text-2);font-weight:700;font-size:var(--fs-md);transition:background var(--t-fast),color var(--t-fast)}
+.nav a:hover{background:color-mix(in srgb,var(--text) 6%,transparent);color:var(--text)}
+.nav a[aria-current=page]{background:var(--surface);color:var(--text);box-shadow:inset 0 0 0 1px var(--line)}
+.nav a[aria-current=page] .icon{color:var(--mark)}
+.nav a small{display:inline;font-weight:400;color:var(--text-3);font-size:var(--fs-xs);margin-left:auto}
+.nav .navbadge{margin-left:auto}
+.side-user{margin-top:auto;padding:var(--s-4) var(--s-2) 0;border-top:1px solid var(--line)}
+.side-user-row{display:flex;align-items:center;gap:10px;margin-bottom:var(--s-3)}
+.side-user-row>div:first-of-type{min-width:0;flex:1;line-height:1.25}
+.side-user-row b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.side-user-row .muted{font-size:var(--fs-sm)}
+.avatar{width:34px;height:34px;flex:none;border-radius:50%;display:grid;place-items:center;background:var(--ink-solid);color:var(--ink-solid-text);font-weight:700;font-size:var(--fs-sm)}
+.side-links{display:flex;flex-direction:column;gap:2px}
+.side-links .btn,.side-links button.btn{justify-content:flex-start;width:100%;border-color:transparent;background:transparent;color:var(--text-2);min-height:34px;padding:0 var(--s-3);font-size:var(--fs-sm)}
+.side-links .btn:hover{background:color-mix(in srgb,var(--text) 6%,transparent);color:var(--text)}
+.side-links form{margin:0}
+.content{padding:var(--s-6) var(--s-7) var(--s-7);max-width:1280px;width:100%}
+.foot-note{margin-top:var(--s-7);color:var(--text-3);font-size:var(--fs-sm);max-width:70ch}
+
+/* ---------------- patient shell ---------------- */
+.patient-head{background:var(--surface);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:20}
+.patient-head .top{position:static;border:0;height:68px;max-width:1040px;margin:0 auto;padding:0 var(--s-5);background:transparent}
+.who{margin-left:auto;text-align:right;line-height:1.25;font-size:var(--fs-sm);color:var(--text-2)}
+.who b{display:block;color:var(--text);font-size:var(--fs-md)}
+.who+.theme-toggle{margin-left:0}
+.patientnav{display:flex;gap:var(--s-5);padding:0 var(--s-5);max-width:1040px;margin:0 auto;overflow-x:auto;scrollbar-width:none}
+.patientnav::-webkit-scrollbar{display:none}
+.patientnav a{display:inline-flex;align-items:center;min-height:46px;color:var(--text-2);font-weight:700;border-bottom:3px solid transparent;margin-bottom:-1px;white-space:nowrap;transition:color var(--t-fast),border-color var(--t-fast)}
+.patientnav a:hover{color:var(--text)}
+.patientnav a[aria-current=page]{color:var(--text);border-bottom-color:var(--mark)}
+.patient{max-width:1040px;margin:0 auto;padding:var(--s-6) var(--s-5) var(--s-8)}
+.patient .page-intro{margin-bottom:var(--s-5)}
+.patient h1{font-size:var(--fs-3xl);letter-spacing:-.025em;line-height:1.05}
+.patient .foot-note{margin-top:var(--s-8)}
+
+/* ---------------- patient home ---------------- */
+.visit{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:var(--s-6);align-items:center;padding:var(--s-6)}
+.visit-date{display:grid;justify-items:start;line-height:1;min-width:96px}
+.visit-date b{font-size:76px;letter-spacing:-.04em;font-weight:700;font-variant-numeric:tabular-nums}
+.visit-date span{margin-top:6px;font-size:var(--fs-lg);color:var(--text-2);font-weight:700}
+.visit-info h2{margin:0 0 6px;font-size:var(--fs-xl)}
+.visit-info p{margin:0;color:var(--text-2)}
+.visit.empty{grid-template-columns:minmax(0,1fr) auto}
+.rows{display:grid}
+.row-link{display:flex;align-items:center;gap:var(--s-4);padding:var(--s-4) 0;border-top:1px solid var(--line);color:var(--text);font-weight:700}
+.row-link:first-child{border-top:0;padding-top:0}
+.row-link:last-child{padding-bottom:0}
+.row-link .icon{color:var(--text-2)}
+.row-link span.grow{flex:1;min-width:0}
+.row-link small{display:block;font-weight:400;color:var(--text-2);font-size:var(--fs-sm)}
+.row-link .arrow{color:var(--text-3);transition:transform var(--t-fast) var(--ease)}
+.row-link:hover .arrow{transform:translateX(3px);color:var(--text)}
+.split-2{display:grid;grid-template-columns:1fr 1fr;gap:var(--s-4)}
+.split-2>.card{margin:var(--s-4) 0 0}
+.followup-date{font-size:var(--fs-2xl);font-weight:700;letter-spacing:-.02em;margin:var(--s-2) 0;font-variant-numeric:tabular-nums}
+.reminder-item{padding:var(--s-3) 0;border-top:1px solid var(--line)}
+.reminder-item:first-of-type{border-top:0}
+.reminder-item p{margin:0 0 2px}
+
+/* ---------------- prescription slip ---------------- */
+.rx{width:100%;border-collapse:collapse}
+.rx th{padding:0 var(--s-3) var(--s-2);text-align:right;font-size:var(--fs-sm)}
+.rx th:first-child{text-align:left}
+.rx td{padding:var(--s-4) var(--s-3);text-align:right;font-size:var(--fs-xl);font-weight:700;letter-spacing:-.01em;border-bottom:1px solid var(--line)}
+.rx td:first-child{text-align:left;font-size:var(--fs-md);letter-spacing:0}
+.rx td:first-child small{display:block;font-weight:400;color:var(--text-2);font-size:var(--fs-sm)}
+.rx tbody tr:last-child td{border-bottom:0}
+.rx tbody tr:hover td{background:transparent}
+.rx-meta{display:flex;flex-wrap:wrap;gap:var(--s-2) var(--s-6);color:var(--text-2);margin-bottom:var(--s-4);font-size:var(--fs-md)}
+.rx-meta b{color:var(--text)}
+.return-date{display:flex;align-items:baseline;gap:var(--s-4);flex-wrap:wrap}
+.return-date strong{font-size:var(--fs-2xl);letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+
+/* ---------------- booking (patient + staff) ---------------- */
+.booking-page{max-width:1120px;margin:0 auto}
+.booking-heading{display:flex;justify-content:space-between;align-items:flex-end;gap:var(--s-5);margin-bottom:var(--s-5)}
+.booking-heading h1{margin-bottom:6px}
+.booking-heading p{margin:0}
+.booking-layout{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(280px,.8fr);align-items:start;gap:var(--s-5)}
+.booking-card{min-width:0;padding:var(--s-5);margin:0 0 var(--s-4);border:1px solid var(--line);border-radius:var(--r-2);background:var(--surface)}
+.booking-section-title{margin:var(--s-2) 0 var(--s-4)}
+.booking-section-title h2{margin:0 0 2px;font-size:var(--fs-xl)}
+.booking-section-title p{margin:0}
+.booking-section-title.calendar-title,.calendar-title{margin-top:var(--s-6);padding-top:var(--s-5);border-top:1px solid var(--line)}
+.booking-card label{margin-top:0}
+.calendar-panel{border:1px solid var(--line);border-radius:var(--r-2);padding:var(--s-4);background:var(--sunken)}
+.calendar-header{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:var(--s-4);text-align:center}
+.calendar-header h3{margin:0 0 2px;font-size:var(--fs-lg)}
+.calendar-header p{margin:0}
+.calendar-nav{width:40px;height:40px;flex:0 0 40px;border:1px solid var(--line-strong);border-radius:var(--r-1);color:var(--text);background:var(--surface);font:700 22px/1 var(--font);cursor:pointer;transition:background var(--t-fast)}
+.calendar-nav:hover:not(:disabled){background:var(--canvas)}
+.calendar-nav:disabled{opacity:.3;cursor:not-allowed}
+.calendar-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.calendar-weekdays{margin-bottom:6px}
+.calendar-weekdays span{padding:6px 0;color:var(--text-2);font-size:var(--fs-sm);font-weight:700;text-align:center}
+.calendar-day{display:grid;place-items:center;aspect-ratio:1/1;min-width:0;min-height:40px;padding:0;border:1px solid transparent;border-radius:var(--r-1);background:var(--surface);color:var(--text);font:400 var(--fs-md)/1 var(--font);cursor:pointer;transition:border-color var(--t-fast),background var(--t-fast)}
+.calendar-day:hover:not(:disabled){border-color:var(--ink-500)}
+.calendar-day.today{border-color:var(--text);font-weight:700}
+.calendar-day.available{background:var(--ok-tint);border-color:var(--ok-line)}
+.calendar-day.has-bookings:not(.selected){background:var(--warn-tint);border-color:var(--warn-line);color:var(--warn)}
+.calendar-day.selected{background:var(--accent);border-color:var(--accent);color:var(--on-accent);font-weight:700}
+.calendar-day.past{color:var(--text-3);cursor:not-allowed;opacity:.5;background:transparent}
+.calendar-blank{aspect-ratio:1/1}
+.calendar-legend{display:flex;align-items:center;gap:8px;margin-top:var(--s-3)}
+.calendar-legend-all{display:flex;flex-wrap:wrap;gap:var(--s-2) var(--s-4)}
+.legend-key{display:inline-flex;align-items:center;gap:6px;color:var(--text-2);font-size:var(--fs-sm)}
+.legend-dot{width:10px;height:10px;border-radius:3px;background:var(--accent);display:inline-block}
+.legend-dot.available-dot{background:var(--ok-tint);box-shadow:inset 0 0 0 1px var(--ok)}
+.legend-dot.booked-dot{background:var(--warn-tint);box-shadow:inset 0 0 0 1px var(--warn)}
+.legend-dot.selected-dot{background:var(--accent)}
+#bookedTimes{margin:var(--s-3) 0 0;line-height:1.5}
+#bookedTimes.has-bookings{color:var(--warn)}
+.selected-date-display{display:flex;flex-direction:column;gap:2px;margin-top:var(--s-3);padding:var(--s-3) var(--s-4);border:1px solid var(--line);border-radius:var(--r-1);background:var(--surface)}
+.selected-date-display strong{font-size:var(--fs-lg)}
+.booking-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--s-4) var(--s-5)}
+.booking-form-grid .full-width{grid-column:1/-1}
+.booking-footer{display:grid;gap:var(--s-3);margin-top:var(--s-5);padding-top:var(--s-4);border-top:1px solid var(--line)}
+.booking-footer p{margin:0}
+.booking-submit{width:100%;min-height:50px}
+.booking-submit span{transition:transform var(--t-fast) var(--ease)}
+.booking-submit:hover span{transform:translateX(4px)}
+.booking-submit:disabled{opacity:.45;cursor:not-allowed}
+.booking-sidebar{position:sticky;top:96px}
+.visit-card{padding:var(--s-5)}
+.visit-card h2{margin-bottom:var(--s-3)}
+.summary-item{display:grid;gap:2px;padding:var(--s-3) 0;border-top:1px solid var(--line)}
+.summary-item:first-of-type{border-top:0}
+.summary-item strong{overflow-wrap:anywhere;font-size:var(--fs-lg)}
+.summary-note{margin-top:var(--s-4);padding:var(--s-3) var(--s-4);border-radius:var(--r-1);background:var(--sunken)}
+.summary-note p{margin:4px 0 0}
+.history-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:var(--s-4);margin-bottom:var(--s-3)}
+.history-heading h2{margin:0 0 2px}
+.history-heading p{margin:0}
+.history-count{color:var(--text-2);font-size:var(--fs-sm);white-space:nowrap}
+.appointment-list{display:grid}
+.appointment-row{display:grid;grid-template-columns:130px minmax(0,1fr) auto;align-items:center;gap:var(--s-4);padding:var(--s-4) 0;border-top:1px solid var(--line)}
+.appointment-row .row-actions{grid-column:2/-1}
+.appointment-date-block{display:grid;gap:2px;color:var(--text-2);font-size:var(--fs-sm)}
+.appointment-date-block strong{color:var(--text);font-size:var(--fs-lg)}
+.appointment-details{display:grid;gap:2px;min-width:0}
+.appointment-details>strong{font-size:var(--fs-lg)}
+.empty-appointments{padding:var(--s-6) var(--s-4);border-top:1px solid var(--line);text-align:center;color:var(--text-2)}
+.empty-appointments h3{color:var(--text);margin-bottom:2px}
+.active-booking-notice{border-color:var(--ok-line);background:var(--ok-tint)}
+.active-booking-summary{display:flex;gap:var(--s-2) var(--s-5);align-items:center;flex-wrap:wrap;padding:var(--s-3) 0;margin:var(--s-3) 0 0;border-top:1px solid color-mix(in srgb,var(--text) 14%,transparent)}
+
+/* ---------------- staff: dashboard + lists ---------------- */
+.dashboard-search{display:flex;justify-content:space-between;align-items:center;gap:var(--s-5);flex-wrap:wrap}
+.dashboard-search h3,.dashboard-search p{margin:0 0 2px}
+.dashboard-search form{flex:1;min-width:280px;max-width:640px;flex-wrap:nowrap}
+.dashboard-search input{flex:1;min-width:180px}
+.dashboard-queue{margin-top:var(--s-4)}
+.dashboard-bottom-grid{display:grid;grid-template-columns:1fr 1fr;gap:var(--s-4)}
+.dashboard-bottom-grid .card{margin:var(--s-4) 0 0}
+.snapshot-row{display:flex;justify-content:space-between;gap:var(--s-3);padding:var(--s-3) 0;border-top:1px solid var(--line)}
+.snapshot-row:first-of-type{border-top:0}
+.snapshot-row strong{font-variant-numeric:tabular-nums}
+.workflow-list{padding-left:20px;line-height:1.7;color:var(--text-2);margin:0 0 var(--s-4)}
+.live{display:inline-flex;align-items:center;gap:8px;color:var(--text-2);font-size:var(--fs-sm);font-weight:700}
+.live::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--ok)}
+
+/* ---------------- staff: doctor schedule ---------------- */
+.sched-toolbar{display:flex;flex-wrap:wrap;gap:var(--s-4);align-items:center;justify-content:space-between}
+.sched-form{display:flex;gap:var(--s-2);align-items:center;flex-wrap:wrap}
+.sched-form select,.sched-form input{width:auto}
+.sched-form label{margin:0}
+.sched-strip{display:flex;gap:6px;overflow-x:auto}
+.sched-strip a{display:grid;justify-items:center;gap:1px;padding:6px 12px;border:1px solid var(--line);border-radius:var(--r-1);background:var(--surface);min-width:70px;color:var(--text-2);line-height:1.2}
+.sched-strip a b{color:var(--text);font-size:var(--fs-lg)}
+.sched-strip a:hover{border-color:var(--ink-500)}
+.sched-strip a.active{background:var(--ink-solid);border-color:var(--ink-solid);color:var(--ink-solid-text)}
+.sched-strip a.active b{color:var(--ink-solid-text)}
+.sched-strip a.today:not(.active){border-color:var(--text)}
+.sched-strip small{font-size:var(--fs-xs)}
+.sched-grid{display:grid;gap:6px;margin:var(--s-3) 0}
+.sched-row{display:grid;grid-template-columns:96px 1fr;gap:var(--s-3);align-items:stretch}
+.sched-time{font-weight:700;padding-top:12px}
+.sched-time small{display:block;font-weight:400;color:var(--text-2);font-size:var(--fs-xs)}
+.sched-slot{border-radius:var(--r-1);padding:10px 14px;min-height:56px;display:flex;flex-wrap:wrap;gap:var(--s-2) var(--s-5);align-items:center}
+.sched-slot.free{border:1px dashed var(--line-strong);color:var(--text-3)}
+.sched-slot.booked{background:var(--sunken);border:1px solid var(--line)}
+.sched-row.past{opacity:.55}
+.sched-row.now .sched-time{color:var(--accent-text)}
+.sched-row.now .sched-slot{outline:2px solid var(--mark);outline-offset:-1px}
+.sched-appt{display:grid;gap:2px;justify-items:start}
+.assign-form select{min-width:150px;min-height:32px;padding:4px 30px 4px 10px;font-size:var(--fs-sm)}
+
+/* ---------------- reports ---------------- */
+.bars .bar{display:grid;grid-template-columns:170px minmax(0,1fr) 48px;align-items:center;gap:var(--s-4);margin:var(--s-3) 0}
+.bars .bar b{text-align:right;font-variant-numeric:tabular-nums;font-size:var(--fs-lg)}
+.bars .bar>.track{height:10px;background:var(--sunken);border-radius:5px;overflow:hidden}
+.fill{height:100%;background:var(--ok);border-radius:5px;transition:width var(--t-med) var(--ease)}
+.bars .bar:nth-of-type(2) .fill{background:var(--mark)}
+
+/* ---------------- error / privacy ---------------- */
+.error-page{max-width:560px;margin:14vh auto;padding:0 var(--s-5)}
+.error-page .logo-mark{height:36px;margin-bottom:var(--s-5)}
+.error-page .code{font-size:var(--fs-sm);color:var(--text-2);font-weight:700;margin-bottom:var(--s-2)}
+.error-page h1{font-size:var(--fs-3xl)}
+.privacy{max-width:720px;margin:var(--s-7) auto var(--s-8);padding:0 var(--s-5);line-height:1.65}
+.privacy h2{font-size:var(--fs-xl);margin-top:var(--s-6)}
+
+/* ---------------- responsive: structural, not fluid ---------------- */
+@media(max-width:1100px){
+  .stats,.dashboard-stats{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .content{padding:var(--s-5) var(--s-5) var(--s-7)}
+}
+@media(max-width:900px){
+  .layout{grid-template-columns:minmax(0,1fr)}
+  /* staff shell on small screens: slim sticky bar (brand + Menu); the nav and account links open as a panel */
+  .side{position:sticky;top:0;z-index:30;height:auto;flex-direction:row;flex-wrap:nowrap;align-items:center;justify-content:space-between;gap:var(--s-3);padding:var(--s-2) var(--s-4);border-right:0;border-bottom:1px solid var(--line);overflow:visible}
+  .side-brand{padding:0;min-width:0}
+  .side-panel{display:block;position:absolute;left:0;right:0;top:100%;background:var(--surface-2);border-bottom:1px solid var(--line);padding:var(--s-3) var(--s-4) var(--s-5);overflow-y:auto;overscroll-behavior:contain}
+  .has-js .side-panel{display:none}
+  .has-js .side.open .side-panel{display:flex;flex-direction:column;gap:var(--s-4);max-height:calc(100dvh - 64px)}
+  .has-js .side:not(.open) .side-panel{display:none}
+  .nav{flex-direction:column;gap:2px}
+  .nav a{min-height:48px;font-size:var(--fs-lg)}
+  .side-user{margin:0;padding:var(--s-4) 0 0;border-top:1px solid var(--line)}
+  .side-links .btn{min-height:48px;font-size:var(--fs-md)}
+  .menu-btn{display:none}
+  .has-js .menu-btn{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 14px;border:1px solid var(--line-strong);border-radius:var(--r-1);background:var(--surface);color:var(--text);font:700 var(--fs-md)/1 var(--font);cursor:pointer}
+  .menu-btn .i-close{display:none}
+  .side.open .menu-btn .i-open{display:none}
+  .side.open .menu-btn .i-close{display:inline}
+  .menu-btn .navbadge{margin-left:0}
+  .booking-layout,.dashboard-bottom-grid,.split-2{grid-template-columns:1fr}
+  .booking-sidebar{position:static}
+  .visit-card{order:-1}
+  .auth-split{grid-template-columns:1fr}
+  .auth-side{padding:var(--s-5);min-height:0}
+  .auth-side .chart-mini,.auth-side .fine{display:none}
+  .auth-side .tagline{font-size:26px}
+  .auth-main{padding:var(--s-4) var(--s-5)}
+  .visit{grid-template-columns:auto minmax(0,1fr);}
+  .visit>.actions{grid-column:1/-1}
+}
+@media(max-width:640px){
+  .stats,.dashboard-stats,.sched-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .stat b{font-size:var(--fs-2xl)}
+  .stat:last-child:nth-child(odd){grid-column:1/-1}
+  .visit,.visit.empty{grid-template-columns:1fr}
+  .visit-date{grid-auto-flow:column;align-items:baseline;gap:10px}
+  .form2,.booking-form-grid{grid-template-columns:1fr}
+  .content{padding:var(--s-4) var(--s-4) var(--s-7)}
+  .patient{padding:var(--s-5) var(--s-4) var(--s-7)}
+  .patient h1{font-size:2rem}
+  .top{padding:0 var(--s-4)}
+  .patient-head .top{padding:0 var(--s-4)}
+  .patientnav{padding:0 var(--s-4);gap:var(--s-4)}
+  .who{display:none}
+  .patient-head .theme-toggle{margin-left:auto}
+  .dashboard-heading,.section-heading,.booking-heading{align-items:flex-start;flex-direction:column}
+  .booking-card{padding:var(--s-4)}
+  .calendar-panel{padding:var(--s-3)}
+  .calendar-grid{gap:3px}
+  .calendar-day{min-height:38px;font-size:var(--fs-sm)}
+  .appointment-row{grid-template-columns:1fr auto;gap:var(--s-2)}
+  .appointment-details{grid-column:1;grid-row:2}
+  .appointment-row .badge{grid-column:2;grid-row:1/span 2}
+  .appointment-row .row-actions{grid-column:1/-1}
+  .visit{padding:var(--s-5);gap:var(--s-4)}
+  .visit-date b{font-size:56px}
+  .bars .bar{grid-template-columns:1fr 40px}
+  .bars .bar>span{grid-column:1/-1}
+  .bars .bar>.track{grid-column:1}
+  .sched-row{grid-template-columns:64px 1fr}
+  .rx td{font-size:var(--fs-lg)}
+  .brand-name small{display:none}
+  .table-wrap table{min-width:640px}
+}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{transition-duration:.01ms!important;animation-duration:.01ms!important;scroll-behavior:auto!important}}
+@media print{.side,.patient-head,.top,.btn,.theme-toggle{display:none!important}.layout{display:block}body{background:#fff}}
+
+/* late additions */
+.selected-date-display>div{display:grid;gap:2px}
+td select{width:auto;min-height:34px;padding-top:5px;padding-bottom:5px}
+td form.assign-form select{width:auto}
+.bars .bar>span{color:var(--text-2)}
+.selected-date-display+.booking-section-title,.selected-date-display~.booking-section-title{margin-top:var(--s-6);padding-top:var(--s-5);border-top:1px solid var(--line)}
+.auth p.small a{font-weight:400}
+.card>h3+table,.card>h3+.table-wrap{margin-top:var(--s-3)}
+
+/* two-step sign-in + Google */
+.sec-form{display:grid;gap:var(--s-2);margin:var(--s-4) 0;padding-top:var(--s-4);border-top:1px solid var(--line)}
+.sec-form label{margin-top:0}
+.sec-form .btn{justify-self:start}
+.qr{display:block;border:1px solid var(--line);border-radius:var(--r-1);background:#fff;padding:var(--s-2)}
+.setup-key{font-size:var(--fs-lg);letter-spacing:.08em;word-break:break-all;user-select:all}
+.backup-codes{list-style:none;margin:var(--s-3) 0;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--s-2)}
+.backup-codes li{background:var(--sunken);border:1px solid var(--line);border-radius:var(--r-1);padding:var(--s-2) var(--s-3);text-align:center}
+.backup-codes code{font-size:var(--fs-lg);letter-spacing:.06em;user-select:all}
+.or-divider{display:flex;align-items:center;gap:var(--s-3);color:var(--text-3);font-size:var(--fs-sm);margin:var(--s-4) 0}
+.or-divider::before,.or-divider::after{content:"";flex:1;height:1px;background:var(--line)}
+.google-btn{display:flex;align-items:center;justify-content:center;gap:var(--s-3);width:100%;margin-bottom:var(--s-4)}
+.g-logo{width:18px;height:18px;flex:none}
+
+/* show / hide password button */
+.pw-field{position:relative}
+.pw-field input{padding-right:44px}
+.pw-toggle{position:absolute;top:0;right:0;height:100%;min-height:40px;width:42px;display:flex;align-items:center;justify-content:center;background:none;border:0;border-radius:var(--r-1);color:var(--text-2);cursor:pointer;padding:0}
+.pw-toggle:hover{color:var(--text)}
+.pw-toggle:focus-visible{outline:2px solid var(--focus);outline-offset:-2px}
+.qr-actions{display:flex;gap:var(--s-2);flex-wrap:wrap;margin:var(--s-2) 0}
+
+/* =====================================================================
+   Mobile pass: touch targets, no iOS focus-zoom, tables as cards,
+   dynamic viewport height, tighter auth and headers.
+   ===================================================================== */
+.menu-btn{display:none}
+a,button,input,select,textarea,summary,label{touch-action:manipulation}
+@supports (height:100dvh){
+  .layout,.auth-split{min-height:100dvh}
+  @media(min-width:901px){.side{height:100dvh}}
+}
+.patientnav.has-more{-webkit-mask-image:linear-gradient(to right,#000 calc(100% - 36px),transparent);mask-image:linear-gradient(to right,#000 calc(100% - 36px),transparent)}
+
+/* 16px fields stop iOS Safari zooming the page on focus */
+@media(max-width:900px){
+  input,select,textarea,body.app-patient input,body.app-patient select,body.app-patient textarea{font-size:1rem}
+  .table-sortbar select{font-size:1rem;min-height:40px}
+}
+
+/* fingers: 44px minimum targets on touch screens */
+@media(pointer:coarse){
+  .btn,.btn-small,body.app-patient .btn-small{min-height:44px}
+  input,select,textarea{min-height:46px}
+  .theme-toggle{width:44px;height:44px}
+  .calendar-nav{width:44px;height:44px;flex-basis:44px}
+  .calendar-day{min-height:44px}
+  .pw-toggle{width:46px}
+  .patientnav a{min-height:48px}
+  input[type=checkbox],input[type=radio]{width:22px;height:22px}
+  .consent{gap:12px}
+  .row-actions{gap:6px}
+}
+
+@media(max-width:640px){
+  body{overflow-wrap:break-word}
+  /* header + shell */
+  .patient-head .top{height:56px}
+  .logo-mark{height:26px}
+  .patient{padding-top:var(--s-4)}
+  .patient h1{font-size:1.75rem;line-height:1.1}
+  .content{padding-top:var(--s-4)}
+  h1{font-size:1.5rem}
+  .foot-note{margin-top:var(--s-6)}
+  .card{padding:var(--s-4)}
+  .section-heading{margin-bottom:var(--s-3)}
+
+  /* forms: one column, full-width primary actions */
+  .form2 button.btn,.form2 .btn{justify-self:stretch;width:100%}
+  .actions>.btn,.actions>button{flex:1 1 auto}
+  .sched-form{width:100%}
+  .sched-form select,.sched-form input{width:100%;flex:1 1 140px}
+  .dashboard-search{align-items:stretch}
+  .dashboard-search form{min-width:0;max-width:none;flex-wrap:wrap;width:100%}
+  .dashboard-search input{min-width:0;flex:1 1 100%}
+  .conv-new form{flex-wrap:wrap}
+  .conv-new .btn{flex:1 1 100%}
+  .notice-item .row-actions{margin-left:0;width:100%}
+  .notice{padding:var(--s-4)}
+  .history-heading{flex-direction:column;align-items:flex-start}
+
+  /* prescription slip must fit without sideways scrolling */
+  .table-wrap table.rx{min-width:0}
+  .rx th{padding:0 4px var(--s-2);font-size:var(--fs-xs)}
+  .rx td{padding:var(--s-3) 4px;font-size:1rem}
+  .rx td:first-child{font-size:var(--fs-sm)}
+  .rx td:first-child small{font-size:var(--fs-xs)}
+
+  /* data tables become one card per row (labels filled in by ui.js) */
+  .table-wrap table.stack{min-width:0}
+  .stack .stack-head{display:none}
+  .stack thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+  .stack,.stack tbody,.stack tr,.stack td{display:block;width:100%}
+  .stack tr{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-2);padding:var(--s-1) var(--s-4);margin:0 0 var(--s-3)}
+  .stack tbody tr:hover td{background:transparent}
+  .stack tr.priority-row{background:var(--warn-tint);border-color:var(--warn-line)}
+  .stack tr.priority-row td{background:transparent}
+  .stack td{display:grid;grid-template-columns:minmax(84px,32%) minmax(0,1fr);gap:var(--s-3);align-items:start;padding:10px 0!important;border-bottom:1px solid var(--line)}
+  .stack td:last-child{border-bottom:0}
+  .stack td::before{content:attr(data-label);color:var(--text-2);font-size:var(--fs-sm);font-weight:700;line-height:1.5}
+  .stack td[data-label=""],.stack td[colspan]:not([colspan="1"]){grid-template-columns:minmax(0,1fr)}
+  .stack td[data-label=""]::before,.stack td[colspan]:not([colspan="1"])::before{display:none}
+  .stack td .row-actions{width:100%}
+  .stack .row-actions .btn:not(.primary):not(.danger){border-color:var(--line-strong);flex:1 1 auto}
+  .stack .row-actions form{flex:1 1 auto}
+  .stack .row-actions form .btn{width:100%}
+  .stack td.empty-cell{text-align:left}
+
+  /* chat: use the visible viewport, keep the composer reachable */
+  .chat-scroll{height:min(62dvh,520px);min-height:240px;padding:var(--s-4)}
+  .chat-compose{padding:10px 12px calc(10px + env(safe-area-inset-bottom,0px))}
+  .chat-top{padding:10px 12px}
+  .chat-foot{flex-wrap:wrap}
+
+  /* sign-in / sign-up */
+  .auth-side{padding:var(--s-3) var(--s-4);gap:0}
+  .auth-side .tagline{display:none}
+  .auth-main{padding:var(--s-3) var(--s-4) var(--s-5)}
+  .auth-main .auth{padding:var(--s-4) 0}
+  .auth{margin-top:72px;margin-bottom:var(--s-6);padding:0 var(--s-4)}
+  .auth .card{padding:var(--s-4)}
+  .auth h1{font-size:1.625rem}
+  .qr{max-width:100%;height:auto}
+  .setup-key{font-size:var(--fs-md)}
+  .backup-codes{gap:6px}
+  .backup-codes code{font-size:var(--fs-md)}
+  .error-page{margin:10dvh auto}
+}
+@media(max-width:400px){
+  .stat{padding:var(--s-3)}
+  .stat b{font-size:1.5rem}
+  .calendar-grid{gap:2px}
+  .calendar-header h3{font-size:var(--fs-md)}
+  .visit-date b{font-size:44px}
+  .backup-codes{grid-template-columns:1fr}
+}
+
+/* nothing inside the page may be wider than the screen */
+.content,.patient,.card,.table-wrap{min-width:0;max-width:100%}
+@media(max-width:640px){
+  .table-wrap{overflow-x:visible}
+  .stack td select,.stack td input{max-width:100%}
+  .stack td form{width:100%}
+  .stack td form .btn{width:100%}
+}
+
+/* safety net that does not depend on JavaScript: a wide table scrolls inside its panel instead of widening the page */
+@media(max-width:900px){
+  .card{overflow-x:auto}
+  main.content,main.patient{overflow-x:clip}
+}

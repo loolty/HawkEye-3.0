@@ -1,0 +1,71 @@
+{% extends 'base_staff.html' %}
+{% block title %}Dashboard{% endblock %}
+{% block body %}
+<div class="dashboard-heading">
+  <div><h1>Dashboard</h1><p class="muted">{{ stats.appointments }} on today’s schedule. {% if stats.pending %}<b>{{ stats.pending }}</b> {{ 'is' if stats.pending==1 else 'are' }} waiting for your decision.{% else %}Nothing is waiting on you.{% endif %}</p></div>
+  <span class="live" id="liveStatus" role="status">Live updates on</span>
+</div>
+<div class="stats dashboard-stats">
+  <div class="stat"><b>{{ stats.appointments }}</b>Appointments today</div>
+  <div class="stat{% if stats.pending %} hot{% endif %}"><b>{{ stats.pending }}</b>Awaiting action</div>
+  <div class="stat"><b>{{ stats.new_patients }}</b>New patients, last 7 days</div>
+  <div class="stat"><b>{{ stats.followups }}</b>Upcoming follow-ups</div>
+  <div class="stat{% if stats.overdue %} hot{% endif %}"><b>{{ stats.overdue }}</b>Overdue or missed</div>
+</div>
+<div class="card dashboard-search">
+  <div><h3>Find a patient</h3><p class="muted small">By name or patient ID.</p></div>
+  <form action="{{ url_for('patients') }}" class="actions"><input name="q" placeholder="e.g. Maria Santos or HK-2026-0142" aria-label="Patient name or ID"><button class="btn">Search</button></form>
+</div>
+<div class="card dashboard-queue">
+  <div class="section-heading"><div><h3>Today’s queue</h3><p class="muted small">Requests that need a decision come first, then confirmed visits by time.</p></div><div class="actions"><a class="btn" href="{{ url_for('appointments') }}">All appointments</a><a class="btn primary" href="{{ url_for('walk_in') }}"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg>Add walk-in</a></div></div>
+  {% if appts %}
+  <div class="table-wrap"><table>
+    <thead><tr><th>Patient</th><th>Visit</th><th>Date &amp; time</th><th>Status</th><th>Reminder</th><th>Actions</th></tr></thead>
+    <tbody>{% for a in appts %}
+      <tr class="{% if a.status in ['Pending','Requested'] %}priority-row{% endif %}">
+        <td><strong>{{ a.name }}</strong><div class="muted small">{{ a.code or '' }}{% if a.is_new_patient %} · <span class="new-patient-tag">New patient</span><form method="post" action="{{ url_for('mark_patient_reviewed', pid=a.patient_pk) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-small">Mark reviewed</button></form>{% endif %}</div></td>
+        <td>{{ a.type }}</td>
+        <td><strong>{{ a.date }}</strong><div class="muted small">{{ a.time }}</div></td>
+        <td><span class="badge {{ a.status }}">{{ a.status }}</span></td>
+        <td>{{ a.reminder_status or 'Not sent' }}</td>
+        <td><div class="row-actions">
+          <a class="btn btn-small" href="{{ url_for('prescription', pid=a.patient_id) }}">Prescription</a><a class="btn btn-small" href="{{ url_for('patient_edit', pid=a.patient_id) }}">Details</a>
+          <form method="post" action="{{ url_for('appointment_delete', aid=a.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-small">Remove</button></form>
+          {% if a.status in ['Pending','Requested'] %}<form method="post" action="{{ url_for('appointment_status', aid=a.id, status='Confirmed') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn primary btn-small">Confirm</button></form>{% endif %}
+          {% if a.status == 'Confirmed' %}<form method="post" action="{{ url_for('appointment_status', aid=a.id, status='Completed') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-small">Complete</button></form>{% endif %}
+          {% if a.status not in ['Cancelled','Completed','Rejected','Missed'] %}<form method="post" action="{{ url_for('appointment_status', aid=a.id, status='Cancelled') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn danger btn-small">Cancel</button></form>{% endif %}
+        </div></td>
+      </tr>
+    {% endfor %}</tbody>
+  </table></div>
+  {% else %}<div class="empty-state"><svg class="icon" aria-hidden="true"><use href="#i-calendar"/></svg><h3>Nothing in today’s queue</h3><p>New bookings appear here by themselves.</p></div>{% endif %}
+</div>
+<div class="card dashboard-queue"><div class="section-heading"><div><h3>Needs a call or message</h3><p class="muted small">Patients who missed a visit, or whose request is still open after its date.</p></div><span class="badge Missed">{{urgent|length}} to follow up</span></div>
+{% if urgent %}<div class="table-wrap"><table class="sortable-table"><thead><tr><th>Patient</th><th>Visit</th><th>Date & time</th><th>Status</th><th>Contact</th></tr></thead><tbody>{% for u in urgent %}<tr><td><strong>{{u.name}}</strong><div class="muted small">{{u.code}}</div></td><td>{{u.type}}</td><td>{{u.date}} · {{u.time}}</td><td><span class="badge {{u.status}}">{{u.status}}</span></td><td><div class="row-actions"><form method="post" action="{{url_for('urgent_contact',pid=u.pid,channel='email')}}"><input type="hidden" name="csrf_token" value="{{csrf_token()}}"><input type="hidden" name="message" value="We noticed you missed or have an incomplete eye-care visit. Please contact HawkEye Optical Clinic to arrange your next visit."><button class="btn btn-small" {% if not u.email %}disabled title="No email saved"{% endif %}>Email</button></form><form method="post" action="{{url_for('urgent_contact',pid=u.pid,channel='chat')}}"><input type="hidden" name="csrf_token" value="{{csrf_token()}}"><input type="hidden" name="message" value="Hello {{u.name}}, HawkEye Optical Clinic would like to help you arrange your follow-up visit."><button class="btn btn-small">Website chat</button></form><form method="post" action="{{url_for('urgent_contact',pid=u.pid,channel='sms')}}"><input type="hidden" name="csrf_token" value="{{csrf_token()}}"><input type="hidden" name="message" value="HawkEye Optical Clinic: Please contact us to arrange your follow-up visit."><button class="btn btn-small">SMS prototype</button></form><form method="post" action="{{url_for('resolve_urgent_appointment',aid=u.appointment_id)}}"><input type="hidden" name="csrf_token" value="{{csrf_token()}}"><button class="btn primary btn-small">Resolve</button></form></div></td></tr>{% endfor %}</tbody></table></div>{% else %}<p class="muted" style="margin:0">Nobody to follow up right now.</p>{% endif %}</div>
+<div class="dashboard-bottom-grid">
+  <div class="card"><h3>Clinic snapshot</h3><div class="snapshot-row"><span>Total patients</span><strong>{{ stats.patients }}</strong></div><div class="snapshot-row"><span>Reminders sent</span><strong>{{ stats.reminders }}</strong></div><div class="snapshot-row"><span>Follow-ups to review</span><strong>{{ stats.followups }}</strong></div></div>
+  <div class="card"><h3>Before you close the day</h3><ol class="workflow-list"><li>Decide on every open request.</li><li>Check follow-ups due and failed reminders.</li></ol><a href="{{ url_for('followups') }}" class="btn">Open follow-ups</a></div>
+</div>
+<script nonce="{{ csp_nonce() }}">
+(() => {
+  let knownId = Number({{ latest_appointment_id|tojson }});
+  const status = document.getElementById('liveStatus');
+  async function checkForUpdates() {
+    try {
+      const response = await fetch('{{ url_for("staff_dashboard_state") }}', {headers: {'Accept': 'application/json'}, cache: 'no-store'});
+      if (!response.ok) throw new Error('Dashboard update check failed');
+      const data = await response.json();
+      if (Number(data.latest_appointment_id) > knownId) {
+        status.textContent = 'New booking found, refreshing';
+        window.location.reload();
+        return;
+      }
+      status.textContent = 'Live updates on';
+    } catch (_) {
+      status.textContent = 'Live updates reconnecting';
+    }
+  }
+  window.setInterval(checkForUpdates, 15000);
+})();
+</script>
+{% endblock %}

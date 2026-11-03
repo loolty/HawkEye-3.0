@@ -1,0 +1,22 @@
+# systemd unit. Install:  sudo cp deploy/hawkeye.service /etc/systemd/system/hawkeye.service
+# Edit User / paths below, then:  sudo systemctl daemon-reload && sudo systemctl enable --now hawkeye
+[Unit]
+Description=HawkEye Optical Clinic (gunicorn)
+After=network.target mariadb.service
+Wants=mariadb.service
+
+[Service]
+User=hawkeye
+Group=hawkeye
+WorkingDirectory=/opt/hawkeye
+# The app reads /opt/hawkeye/.env itself.
+ExecStart=/opt/hawkeye/.venv/bin/gunicorn --workers 3 --threads 2 --bind 127.0.0.1:8000 --timeout 60 --access-logfile - wsgi:app
+Restart=always
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ReadWritePaths=/opt/hawkeye/logs
+
+[Install]
+WantedBy=multi-user.target

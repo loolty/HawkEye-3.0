@@ -1,0 +1,7 @@
+<!doctype html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Two-step sign-in · HawkEye Optical Clinic</title><link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">{% include '_favicon.html' %}{% include '_theme.html' %}</head>
+<body>{% with tt='floating' %}{% include '_theme_toggle.html' %}{% endwith %}<main class="auth">{% include '_brand.html' %}<h1>Two-step sign-in</h1><p class="muted">Open your authenticator app and enter the 6-digit code for HawkEye Optical Clinic.</p>
+{% with messages = get_flashed_messages(with_categories=true) %}{% for category, message in messages %}<div class="flash {{ category }}">{{ message }}</div>{% endfor %}{% endwith %}
+<div class="card"><form method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><label for="code" style="margin-top:0">Authentication code</label><input id="code" name="code" type="text" inputmode="text" autocomplete="one-time-code" autocapitalize="characters" spellcheck="false" maxlength="14" placeholder="123456" required autofocus><button class="btn primary" type="submit">Verify and sign in</button></form>
+<p class="muted small">Lost your phone? Enter one of your backup codes instead (it looks like <code>ABCDE-FGHJK</code>). Each backup code works once.</p></div>
+<p class="small"><a href="{{ login_url }}">← Start over</a></p></main></body></html>

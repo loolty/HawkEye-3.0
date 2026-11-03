@@ -1,0 +1,37 @@
+{% extends 'base_staff.html' %}
+{% block title %}{% if session.role=='Optometrist' %}My schedule{% else %}Doctor schedule{% endif %}{% endblock %}
+{% block body %}
+<div class="section-heading"><div><h1>{% if session.role=='Optometrist' %}My schedule{% else %}Doctor schedule{% endif %}</h1><p class="muted">Hourly view of booked and free times{% if doctor %} for <b>{{ doctor.name }}</b>{% endif %}.</p></div><a class="btn primary" href="{{ url_for('appointment_new') }}"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg>New Appointment</a></div>
+{% if not doctor %}
+<div class="card"><p class="muted">No active doctors (Optometrists) found{% if session.role!='Admin' %} for your branch{% endif %}. Add one under User Management first.</p></div>
+{% else %}
+<div class="card sched-toolbar">
+  <form method="get" class="sched-form">
+    {% if doctors %}<label for="doctor" class="sr">Doctor</label><select id="doctor" name="doctor" data-autosubmit>{% for d in doctors %}<option value="{{ d.id }}" {% if d.id==doctor.id %}selected{% endif %}>{{ d.name }}{% if d.branch_name %} · {{ d.branch_name }}{% endif %}</option>{% endfor %}</select>{% endif %}
+    <a class="btn" href="{{ url_for('doctor_schedule', date=prev.isoformat(), doctor=doctor.id) }}" aria-label="Previous day">&larr;</a>
+    <input type="date" name="date" value="{{ day.isoformat() }}" data-autosubmit aria-label="Date">
+    <a class="btn" href="{{ url_for('doctor_schedule', date=nxt.isoformat(), doctor=doctor.id) }}" aria-label="Next day">&rarr;</a>
+    <a class="btn" href="{{ url_for('doctor_schedule', date=today.isoformat(), doctor=doctor.id) }}">Today</a>
+  </form>
+  <div class="sched-strip">{% for d in strip %}<a href="{{ url_for('doctor_schedule', date=d.date.isoformat(), doctor=doctor.id) }}" class="{% if d.date==day %}active{% endif %}{% if d.date==today %} today{% endif %}"><span>{{ d.date.strftime('%a') }}</span><b>{{ d.date.day }}</b><small>{{ d.n }} booked</small></a>{% endfor %}</div>
+</div>
+<div class="stats sched-stats"><div class="stat"><b>{{ summary.patients }}</b>Patients on {{ day.strftime('%b %d') }}</div><div class="stat"><b>{{ summary.booked }}</b>Hours booked</div><div class="stat"><b>{{ summary.free }}</b>Hours free</div>{% if session.role!='Optometrist' %}<div class="stat"><b>{{ unassigned }}</b>Unassigned that day</div>{% endif %}</div>
+<div class="card">
+  <h3>{{ day.strftime('%A, %B %d, %Y') }}</h3>
+  <div class="sched-grid">
+  {% for h in hours %}
+    <div class="sched-row {% if h['current'] %}now{% endif %} {% if h.past %}past{% endif %}">
+      <div class="sched-time">{{ h.label }}<small>to {{ h['end'] }}</small></div>
+      <div class="sched-slot {% if h['items'] %}booked{% else %}free{% endif %}">
+      {% for a in h['items'] %}
+        <div class="sched-appt"><div><strong>{{ a.name }}</strong> <span class="muted small">{{ a.code }}</span></div><div class="small">{{ a.time }} &middot; {{ a.type }}{% if a.phone %} &middot; {{ a.phone }}{% endif %}</div><span class="badge {{ a.status }}">{{ a.status }}</span></div>
+      {% else %}<span class="free-label">Free</span>{% endfor %}
+      </div>
+    </div>
+  {% endfor %}
+  {% if outside %}<div class="sched-row"><div class="sched-time">Other<small>outside hours</small></div><div class="sched-slot booked">{% for a in outside %}<div class="sched-appt"><div><strong>{{ a.name }}</strong></div><div class="small">{{ a.time }} &middot; {{ a.type }}</div><span class="badge {{ a.status }}">{{ a.status }}</span></div>{% endfor %}</div></div>{% endif %}
+  </div>
+  <p class="muted small">Clinic hours shown: 08:00&ndash;18:00. Cancelled and rejected visits are hidden. Assign a doctor to an appointment from the Appointments page.</p>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,71 @@
+{% extends 'base_staff.html' %}
+{% block title %}Clinic chat{% endblock %}
+{% block body %}
+<div class="chat-head"><div><h1>Clinic chat</h1><p class="muted" style="margin:0">Message patients and read their replies. Patients see the thread under Messages in their portal.</p></div></div>
+
+<div class="chat-note"><svg class="icon" aria-hidden="true"><use href="#i-info"/></svg><div>Messages are saved to the clinic record. Patients are told this chat is <b>not for emergencies</b>, and chat does not replace a clinical assessment.</div></div>
+
+<div class="chat-layout {{ 'has-thread' if selected else '' }}">
+  <aside class="conv-pane">
+    <div class="conv-new">
+      <form method="get" action="{{ url_for('staff_chat') }}">
+        <div style="flex:1;min-width:0">
+          <label for="new-patient">Start or open a conversation</label>
+          <select id="new-patient" name="patient_id" required>
+            <option value="" disabled {% if not selected %}selected{% endif %}>Choose a patient…</option>
+            {% for p in patients %}<option value="{{ p.id }}" {% if selected and selected.id == p.id %}selected{% endif %}>{{ p.name }} · {{ p.patient_id }}</option>{% endfor %}
+          </select>
+        </div>
+        <button class="btn" style="align-self:flex-end">Open</button>
+      </form>
+    </div>
+    <div class="conv-list" id="convlist" data-state="{{ url_for('api_staff_chat_state') }}" data-base="{{ url_for('staff_chat') }}" data-active="{{ selected.id if selected else '' }}">
+      {% for c in conversations %}
+        <a class="conv {{ 'active' if selected and selected.id == c.id else '' }}" data-pid="{{ c.id }}" data-last="{{ c.last_at }}" href="{{ url_for('staff_chat', patient_id=c.id) }}">
+          <div class="conv-top"><b>{{ c.name }}</b><span class="conv-time">{{ c.last_at[:16] }}</span></div>
+          <div class="conv-code muted small">{{ c.code }}</div>
+          <div class="conv-bottom"><span class="conv-preview">{% if c.last_sender == 'Staff' %}You: {% endif %}{{ c.last_message[:90] }}</span><span class="ubadge" {% if not c.unread or (selected and selected.id == c.id) %}hidden{% endif %}>{{ c.unread }}</span></div>
+        </a>
+      {% else %}
+        <div class="conv-empty" id="conv-empty">No conversations yet. Choose a patient above to send the first message.</div>
+      {% endfor %}
+    </div>
+  </aside>
+
+  <section>
+    {% if selected %}
+      <a class="back-link" href="{{ url_for('staff_chat') }}">← All conversations</a>
+      <div class="chat-card" id="chat" data-me="Staff" data-other="{{ selected.name }}"
+           data-poll="{{ url_for('api_staff_chat_messages', pid=selected.id) }}" data-send="{{ url_for('api_staff_chat_send', pid=selected.id) }}"
+           data-csrf="{{ csrf_token() }}" data-last="{{ last_id }}">
+        <div class="chat-top">
+          <div class="chat-avatar pt">{{ selected.name[:1]|upper }}</div>
+          <div><b>{{ selected.name }}</b><small>{{ selected.patient_id }}</small></div>
+        </div>
+        <div class="chat-scroll" id="chat-scroll" aria-live="polite">
+          {% for m in thread %}
+            {% set mine = m.sender == 'Staff' %}
+            <div class="msg {{ 'mine' if mine else 'theirs' }}" data-id="{{ m.id }}">
+              <div class="bubble">{{ m.message }}</div>
+              <div class="meta">{{ (m.staff_name or 'Staff') if mine else selected.name }} · {{ m.created_at[:16] }}</div>
+            </div>
+          {% else %}
+            <div class="chat-empty" id="chat-empty"><svg class="icon" aria-hidden="true"><use href="#i-message"/></svg>No messages with {{ selected.name }} yet. Send the first one below.</div>
+          {% endfor %}
+        </div>
+        <div class="chat-compose">
+          <form method="post" action="{{ url_for('staff_chat') }}" id="chat-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="patient_id" value="{{ selected.id }}">
+            <textarea id="chat-text" name="message" maxlength="1000" rows="1" required placeholder="Write a message to {{ selected.name }}…" aria-label="Message"></textarea>
+            <button class="btn primary" id="chat-send" type="submit">Send</button>
+          </form>
+          <div class="chat-foot"><span class="chat-error" id="chat-error"></span><span id="chat-count">0/1000</span></div>
+        </div>
+      </div>
+    {% else %}
+      <div class="thread-empty"><div><svg class="icon" aria-hidden="true"><use href="#i-message"/></svg><p style="margin:10px 0 0">Select a conversation, or choose a patient to start one.</p></div></div>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

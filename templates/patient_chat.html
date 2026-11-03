@@ -1,0 +1,36 @@
+{% extends 'base_patient.html' %}{% block title %}Messages{% endblock %}{% block body %}
+<div class="chat-head"><div><h1>Messages</h1><p class="muted" style="margin:0">Write to the clinic team. Replies appear here.</p></div></div>
+
+<div class="chat-note"><svg class="icon" aria-hidden="true"><use href="#i-info"/></svg><div><b>Not for emergencies.</b> The clinic team replies when available. If you have sudden vision loss, an eye injury or severe pain, contact the clinic directly or seek emergency care right away.</div></div>
+
+<section class="chat-card" id="chat" data-me="Patient" data-other="Clinic team"
+         data-poll="{{ url_for('api_patient_chat_messages') }}" data-send="{{ url_for('api_patient_chat_send') }}"
+         data-csrf="{{ csrf_token() }}" data-last="{{ last_id }}">
+  <div class="chat-top">
+    <div class="chat-avatar"><img class="logo-light"  src="{{ url_for('static', filename='img/hawkeyes-mark.png') }}" alt=""><img class="logo-dark"  src="{{ url_for('static', filename='img/hawkeyes-mark-dark.png') }}" alt="" aria-hidden="true"></div>
+    <div><b>HawkEye Optical Clinic</b><small>Clinic team</small></div>
+  </div>
+
+  <div class="chat-scroll" id="chat-scroll" aria-live="polite">
+    {% for m in thread %}
+      {% set mine = m.sender == 'Patient' %}
+      <div class="msg {{ 'mine' if mine else 'theirs' }}" data-id="{{ m.id }}">
+        <div class="bubble">{{ m.message }}</div>
+        <div class="meta">{{ 'You' if mine else (m.staff_name or 'Clinic team') }} · {{ m.created_at[:16] }}</div>
+      </div>
+    {% else %}
+      <div class="chat-empty" id="chat-empty"><svg class="icon" aria-hidden="true"><use href="#i-message"/></svg>No messages yet. Ask the clinic a question about your appointment or follow-up.</div>
+    {% endfor %}
+  </div>
+
+  <div class="chat-compose">
+    <form method="post" action="{{ url_for('patient_chat') }}" id="chat-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <textarea id="chat-text" name="message" maxlength="1000" rows="1" required placeholder="Write a message…" aria-label="Message"></textarea>
+      <button class="btn primary" id="chat-send" type="submit">Send</button>
+    </form>
+    <div class="chat-foot"><span class="chat-error" id="chat-error"></span><span id="chat-count">0/1000</span></div>
+  </div>
+</section>
+<script src="{{ url_for('static', filename='js/chat.js') }}"></script>
+{% endblock %}

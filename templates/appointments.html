@@ -1,0 +1,24 @@
+{% extends 'base_staff.html' %}
+{% block title %}{{ title }}{% endblock %}
+{% block body %}
+<div class="section-heading"><div><h1>{{ title }}</h1><p class="muted">Requests needing action are prioritized first; appointments are then ordered by date and time.</p></div><a class="btn primary" href="{{ url_for('appointment_new') }}"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg>New {{ 'Follow-Up' if title == 'Follow-Ups' else 'Appointment' }}</a></div>
+<div class="card">
+  <div class="table-wrap"><table>
+    <thead><tr><th>Patient</th><th>Visit</th><th>Date &amp; time</th><th>Doctor</th><th>Status</th><th>Reminder</th><th>Actions</th></tr></thead>
+    <tbody>
+    {% for a in rows %}
+      <tr class="{% if a.status in ['Pending','Requested'] %}priority-row{% endif %}">
+        <td><strong>{{ a.name }}</strong><div class="muted small">{{ a.code or '' }}{% if a.is_new_patient %} · <span class="new-patient-tag">New patient</span>{% endif %}</div></td>
+        <td>{{ a.type }}</td><td><strong>{{ a.date }}</strong><div class="muted small">{{ a.time }}</div></td>
+        <td><form method="post" action="{{ url_for('appointment_assign_doctor', aid=a.id) }}" class="assign-form"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><select name="doctor_id" data-autosubmit aria-label="Assign doctor"><option value="">Unassigned</option>{% for d in doctors %}<option value="{{ d.id }}" {% if d.id==a.doctor_id %}selected{% endif %}>{{ d.name }}</option>{% endfor %}</select></form></td><td><span class="badge {{ a.status }}">{{ a.status }}</span></td><td>{{ a.reminder_status or 'Not sent' }}{% if a.type in ['Follow-up','Prescription review'] %}<div class="muted small">Follow-up reminder</div>{% endif %}</td>
+        <td><div class="row-actions">
+          {% if a.status in ['Pending','Requested'] %}<form method="post" action="{{ url_for('appointment_status', aid=a.id, status='Confirmed') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn primary btn-small">Confirm</button></form>{% endif %}
+          {% if a.status == 'Confirmed' %}<form method="post" action="{{ url_for('appointment_status', aid=a.id, status='Completed') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-small">Complete</button></form><form method="post" action="{{ url_for('appointment_status', aid=a.id, status='Missed') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-small">Mark missed</button></form>{% endif %}
+          {% if a.status not in ['Cancelled','Completed','Rejected','Missed'] %}<form method="post" action="{{ url_for('appointment_status', aid=a.id, status='Cancelled') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn danger btn-small">Cancel</button></form>{% endif %}
+        </div></td>
+      </tr>
+    {% else %}<tr><td colspan="7" class="empty-cell">No {{ title|lower }} found.</td></tr>{% endfor %}
+    </tbody>
+  </table></div>
+</div>
+{% endblock %}

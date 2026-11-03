@@ -1,0 +1,4 @@
+{# Date helpers. Appointment dates arrive as 'YYYY-MM-DD' strings or date objects; both stringify the same way. #}
+{% macro icon(name, cls='') %}<svg class="icon {{ cls }}" aria-hidden="true" focusable="false"><use href="#i-{{ name }}"/></svg>{% endmacro %}
+{% macro day_num(d) %}{% set s = (d|string)[:10] %}{% if s|length == 10 %}{{ s[8:10]|int }}{% else %}{{ d }}{% endif %}{% endmacro %}
+{% macro month_year(d) %}{% set s = (d|string)[:10] %}{% if s|length == 10 %}{{ ['January','February','March','April','May','June','July','August','September','October','November','December'][(s[5:7]|int) - 1] }} {{ s[0:4] }}{% endif %}{% endmacro %}

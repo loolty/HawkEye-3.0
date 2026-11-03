@@ -1,0 +1,22 @@
+{% extends 'base_patient.html' %}
+{% block title %}Reminders{% endblock %}
+{% block body %}
+<div class="page-intro">
+  <h1>Reminders</h1>
+  <p class="muted">Appointment and follow-up reminders from your clinic.</p>
+</div>
+{% if not rows %}
+<section class="card empty-state"><svg class="icon" aria-hidden="true"><use href="#i-bell"/></svg><h3>Nothing to read</h3><p>Reminders from the clinic will appear here.</p></section>
+{% else %}
+<section class="card">
+  {% for x in rows %}
+  <article class="reminder-item" style="padding:var(--s-4) 0">
+    <div class="actions" style="justify-content:space-between"><h3 style="margin:0">{% if x.appointment_id %}Appointment reminder{% else %}Message from the clinic{% endif %}</h3><span class="badge {{ 'Read' if x.read_status=='Read' else '' }}">{{x.read_status}}</span></div>
+    <p class="muted small" style="margin:2px 0 8px">Sent {{x.sent_date}}{% if 'Email' in x.channel and 'failed' not in x.channel %} · also emailed to you{% endif %}</p>
+    <p>{{x.message}}</p>
+    {% if x.read_status!='Read' %}<form method="post" action="{{url_for('reminder_read',rid=x.id)}}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn">Mark as read</button></form>{% endif %}
+  </article>
+  {% endfor %}
+</section>
+{% endif %}
+{% endblock %}

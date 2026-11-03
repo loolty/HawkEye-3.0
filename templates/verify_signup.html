@@ -1,0 +1,6 @@
+<!doctype html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Verify Your Email</title><link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">{% include '_favicon.html' %}{% include '_theme.html' %}</head>
+<body>{% with tt='floating' %}{% include '_theme_toggle.html' %}{% endwith %}<main class="auth">{% include '_brand.html' %}<h1>Check your email</h1><p class="muted">Enter the 6-digit code sent to <strong>{{ email }}</strong>. The code expires in 10 minutes.</p>
+{% with messages = get_flashed_messages(with_categories=true) %}{% for category, message in messages %}<div class="flash {{ category }}">{{ message }}</div>{% endfor %}{% endwith %}
+<div class="card"><form method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><label for="code">Verification code</label><input id="code" name="code" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" minlength="6" autocomplete="one-time-code" placeholder="123456" required autofocus><button class="btn primary" type="submit">Verify Email & Create Account</button></form></div>
+<p class="small">Wrong email? <a href="{{ url_for('signup') }}">Start signup again</a></p><a href="{{ url_for('patient_login') }}">← Back to Patient Login</a></main></body></html>

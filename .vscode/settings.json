@@ -1,0 +1,12 @@
+{
+  "appService.zipIgnorePattern": [
+    "**/.venv/**",
+    ".env",
+    "logs/**",
+    "tests/**",
+    "**/__pycache__/**",
+    ".git/**"
+  ],
+  "appService.defaultWebAppToDeploy": "/subscriptions/ab770c52-cb78-4c80-a65a-f05dbe869133/resourceGroups/hawkeye-rg2/providers/Microsoft.Web/sites/hawkeye-clinic-grp3",
+  "appService.deploySubpath": "."
+}

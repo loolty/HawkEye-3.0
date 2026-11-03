@@ -1,0 +1,69 @@
+/* Clinic chat — patient + staff. Tokens come from tokens.css (via style.css). */
+.chat-head{display:flex;align-items:flex-end;justify-content:space-between;gap:var(--s-4);flex-wrap:wrap;margin-bottom:var(--s-2)}
+.chat-head h1{margin-bottom:4px}
+.chat-note{display:flex;gap:10px;align-items:flex-start;margin:var(--s-3) 0 var(--s-4);padding:12px 14px;border:1px solid var(--line);border-radius:var(--r-1);background:var(--surface);color:var(--text-2);font-size:var(--fs-sm);line-height:1.5;max-width:78ch}
+.chat-note .icon{margin-top:2px;color:var(--text-2)}
+.chat-note b{color:var(--text)}
+
+.chat-card{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:var(--r-2);background:var(--surface);overflow:hidden}
+.chat-top{display:flex;align-items:center;gap:12px;padding:12px 18px;border-bottom:1px solid var(--line)}
+.chat-avatar{width:36px;height:36px;flex:0 0 36px;border-radius:50%;display:grid;place-items:center;background:var(--sunken);overflow:hidden}
+.chat-avatar img{width:24px;height:auto;display:block}
+.chat-avatar.pt{background:var(--ink-solid);color:var(--ink-solid-text);font-size:var(--fs-sm);font-weight:700}
+.chat-top b{display:block;line-height:1.2}
+.chat-top small{color:var(--text-2)}
+
+.chat-scroll{height:min(58vh,520px);min-height:300px;overflow-y:auto;padding:var(--s-5);display:flex;flex-direction:column;gap:10px;scroll-behavior:smooth;background:var(--sunken)}
+.chat-empty,.thread-empty p{margin:auto;text-align:center;color:var(--text-2);max-width:300px;font-size:var(--fs-md)}
+.chat-empty .icon{display:block;margin:0 auto 8px;width:28px;height:28px;color:var(--text-3)}
+
+.msg{display:flex;flex-direction:column;max-width:76%}
+.msg.mine{align-self:flex-end;align-items:flex-end}
+.msg.theirs{align-self:flex-start;align-items:flex-start}
+.bubble{padding:10px 14px;border-radius:14px;font-size:var(--fs-md);line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere}
+.msg.mine .bubble{background:var(--ink-solid);color:var(--ink-solid-text);border-bottom-right-radius:4px}
+.msg.theirs .bubble{background:var(--surface);color:var(--text);border:1px solid var(--line);border-bottom-left-radius:4px}
+.msg .meta{margin-top:4px;font-size:var(--fs-xs);color:var(--text-2);font-variant-numeric:tabular-nums}
+.msg.fresh{animation:msgin .2s var(--ease)}
+@keyframes msgin{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+.chat-compose{border-top:1px solid var(--line);padding:12px 14px;background:var(--surface)}
+.chat-compose form{display:flex;gap:var(--s-2);align-items:flex-end}
+.chat-compose textarea{flex:1;min-height:44px;max-height:140px;resize:none;margin:0;line-height:1.4}
+.chat-compose .btn{height:44px;white-space:nowrap}
+.chat-compose .btn[disabled]{opacity:.55;cursor:default}
+.chat-foot{display:flex;justify-content:space-between;gap:12px;margin-top:6px;font-size:var(--fs-xs);color:var(--text-2);font-variant-numeric:tabular-nums}
+.chat-error{color:var(--bad);min-height:1em}
+
+/* staff two-pane layout */
+.chat-layout{display:grid;grid-template-columns:320px minmax(0,1fr);gap:var(--s-4);align-items:start}
+.conv-pane{border:1px solid var(--line);border-radius:var(--r-2);background:var(--surface);overflow:hidden}
+.conv-new{padding:14px;border-bottom:1px solid var(--line)}
+.conv-new label{margin:0 0 6px;font-size:var(--fs-sm)}
+.conv-new form{display:flex;gap:var(--s-2)}
+.conv-new select{margin:0;min-width:0}
+.conv-new .btn{white-space:nowrap}
+.conv-list{max-height:min(62vh,560px);overflow-y:auto}
+.conv{display:block;padding:12px 16px;border-bottom:1px solid var(--line);transition:background var(--t-fast)}
+.conv:last-child{border-bottom:0}
+.conv:hover{background:var(--sunken)}
+.conv.active{background:var(--sunken);box-shadow:inset 0 0 0 1px var(--ink-500)}
+.conv-top,.conv-bottom{display:flex;justify-content:space-between;gap:10px;align-items:center}
+.conv-top b{font-size:var(--fs-md);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.conv-time{font-size:var(--fs-xs);color:var(--text-2);white-space:nowrap;font-variant-numeric:tabular-nums}
+.conv-code{margin:1px 0 4px}
+.conv-preview{font-size:var(--fs-sm);color:var(--text-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.conv .ubadge{margin-left:0}
+.conv-empty{padding:var(--s-5) var(--s-4);text-align:center;color:var(--text-2);font-size:var(--fs-sm)}
+.back-link{display:none;margin-bottom:10px;color:var(--accent-text);font-weight:700}
+.thread-empty{display:grid;place-items:center;min-height:360px;border:1px dashed var(--line-strong);border-radius:var(--r-2);color:var(--text-2);text-align:center;padding:var(--s-6)}
+.thread-empty .icon{width:28px;height:28px;color:var(--text-3)}
+
+@media(max-width:800px){
+  .chat-layout{grid-template-columns:1fr}
+  .chat-layout.has-thread .conv-pane{display:none}
+  .chat-layout.has-thread .back-link{display:inline-block}
+  .msg{max-width:90%}
+  .chat-scroll{height:min(60vh,480px)}
+}
+@media (prefers-reduced-motion:reduce){.msg.fresh{animation:none}.chat-scroll{scroll-behavior:auto}}

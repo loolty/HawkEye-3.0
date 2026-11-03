@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Privacy Notice · {{ clinic }}</title><link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">{% include '_favicon.html' %}{% include '_theme.html' %}</head>
+<body>
+<div class="top">{% include '_brand.html' %}{% with tt='' %}{% include '_theme_toggle.html' %}{% endwith %}</div>
+<main class="privacy">
+<h1>Privacy Notice</h1>
+<p class="muted">How {{ clinic }} handles the personal information you give us through this website.</p>
+
+<h2>What we collect</h2>
+<p><b>Account details:</b> your name, email address and a password (stored only in scrambled, hashed form). <b>Patient record:</b> your clinic patient ID, birthdate, phone number, address and preferred contact channel. <b>Eye-care information:</b> prescriptions recorded by the clinic's optometrists, your appointments and follow-up dates. <b>Communications:</b> reminders we send you and messages you exchange with the clinic team through the site. <b>Security records:</b> sign-in and request counters used to block repeated failed attempts.</p>
+
+<h2>Why we use it</h2>
+<p>To provide your eye care: showing your prescription, booking and confirming appointments, reminding you of visits and follow-ups, answering your messages, and keeping the site secure. We do not use your information for advertising and we do not sell it.</p>
+
+<h2>Who can see it</h2>
+<p>Only authorised clinic staff (administrators, optometrists and clinic staff) can view patient records, and staff accounts are limited by role and branch. We use an email service to deliver verification codes and reminders, so the email address and the message content pass through that provider. We disclose information to others only when you ask us to or when the law requires it.</p>
+
+<h2>Cookies and browser storage</h2>
+<p>The site uses one essential session cookie to keep you signed in. Your light/dark theme choice is stored in your browser. There are no advertising or analytics trackers.</p>
+
+<h2>How long we keep it</h2>
+<p>We keep your records for as long as needed to provide your care and to meet legal and professional record-keeping requirements.</p>
+
+<h2>How we protect it</h2>
+<p>The site is served over an encrypted (HTTPS) connection, passwords are hashed, repeated failed sign-ins are blocked, and pages containing records are not stored in your browser's cache.</p>
+
+<h2>Your choices</h2>
+<p>You may ask us to show you the information we hold about you, correct it, or delete your account, and you may withdraw your consent at any time (we may need to keep some records where the law requires it). Contact us at
+{% if contact %}<a href="mailto:{{ contact }}">{{ contact }}</a>{% else %}the clinic{% endif %}{% if address %} or visit us at {{ address }}{% endif %}.</p>
+
+<p class="muted small">Last updated: <!-- update when you change this notice -->{{ clinic }} may update this notice from time to time; the current version is always on this page.</p>
+<p><a class="btn" href="{{ url_for('index') }}">← Back to home</a></p>
+</main>
+</body></html>
