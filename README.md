@@ -13,7 +13,7 @@ Built with **Flask** and **MySQL / MariaDB**. Runs locally with XAMPP and deploy
 - [Features](#features)
 - [Tech stack](#tech-stack)
 - [Project structure](#project-structure)
-- [Quick start (local, XAMPP)](#quick-start-local-xampp)
+- [Setup guide](#setup-guide)
 - [Configuration](#configuration)
 - [First login and accounts](#first-login-and-accounts)
 - [User roles](#user-roles)
@@ -103,57 +103,131 @@ Exact versions are pinned in `requirements.txt`.
 
 ---
 
-## Quick start (local, XAMPP)
+## Setup guide
 
-**Prerequisites:** Python 3.10+ and XAMPP (for MySQL/MariaDB). Apache is not needed unless you want phpMyAdmin.
+Follow these steps to get the system running on your own computer. It takes about 10 minutes.
 
-### 1. Start MySQL and configure `.env`
+### What you need first
 
-1. Open the XAMPP Control Panel and start **MySQL**.
-2. Copy the template:
-   ```bat
-   copy .env.example .env
-   ```
-3. Edit `.env`. For a default XAMPP install, `MYSQL_HOST=127.0.0.1`, `MYSQL_PORT=3306`, `MYSQL_DATABASE=hawkeye_database`, `MYSQL_USER=root` and an empty `MYSQL_PASSWORD` work.
-4. Generate a secret key and put it in `FLASK_SECRET_KEY`:
-   ```bat
-   python -c "import secrets; print(secrets.token_hex(32))"
-   ```
+| Requirement | Notes |
+|---|---|
+| **Python 3.10 or newer** | Check with `python --version` (Windows: `py --version`). Get it from <https://www.python.org/downloads/>. On Windows, tick **Add Python to PATH** during install. |
+| **MySQL or MariaDB** | Easiest on Windows: [XAMPP](https://www.apachefriends.org/) (start only **MySQL**; Apache is optional). On Mac/Linux you can install MariaDB or MySQL with your package manager. |
+| **Git** | Only needed to download the project from GitHub: <https://git-scm.com/downloads> |
+| **Code editor** (optional) | [VS Code](https://code.visualstudio.com/) |
 
-### 2. Create the database
+### Step 1. Get the code
 
-From the project folder in Command Prompt:
+**From GitHub:**
 
-```bat
-C:\xampp\mysql\bin\mysql.exe -u root < sql\create_database.sql
+```bash
+git clone https://github.com/<your-username>/<your-repo>.git
+cd <your-repo>
 ```
 
-If root has a password, add `-p`. If XAMPP is installed elsewhere, adjust the path. The app also creates and upgrades its own tables on startup.
+Replace the address with your repository's URL (the green **Code** button on GitHub shows it). In VS Code you can also press `Ctrl+Shift+P`, choose **Git: Clone**, and paste the URL.
 
-### 3. Install dependencies
+**From a ZIP file:** extract it, then open a terminal inside the extracted folder (the one containing `app.py`).
+
+### Step 2. Start MySQL
+
+- **Windows (XAMPP):** open the XAMPP Control Panel and click **Start** next to **MySQL**.
+- **Mac/Linux:** make sure the MySQL/MariaDB service is running (for example `sudo systemctl start mariadb`).
+
+### Step 3. Create your `.env` file
+
+The `.env` file holds your private settings. It is **not** stored on GitHub, so you must create it yourself from the template.
 
 ```bat
+:: Windows
+copy .env.example .env
+```
+```bash
+# Mac / Linux
+cp .env.example .env
+```
+
+Open `.env` in an editor and set:
+
+1. `MYSQL_HOST=127.0.0.1`, `MYSQL_PORT=3306`, `MYSQL_DATABASE=hawkeye_database`, `MYSQL_USER=root`. For a default XAMPP install, leave `MYSQL_PASSWORD=` empty. If you set a MySQL password, enter it here.
+2. `FLASK_SECRET_KEY`: generate one and paste it in:
+   ```bash
+   python -c "import secrets; print(secrets.token_hex(32))"
+   ```
+3. `ADMIN_EMAIL` and `ADMIN_PASSWORD`: the first administrator account (see [First login](#first-login-and-accounts)). Use a password of at least 8 characters.
+4. Gmail and Google settings are optional. You can leave them empty for now.
+
+### Step 4. Create the database
+
+Run this in the project folder.
+
+```bat
+:: Windows (XAMPP)
+C:\xampp\mysql\bin\mysql.exe -u root < sql\create_database.sql
+```
+```bash
+# Mac / Linux
+mysql -u root -p < sql/create_database.sql
+```
+
+If your MySQL root account has a password, add `-p` on Windows too and type it when asked. If XAMPP is installed somewhere else, change `C:\xampp`. The app also creates and upgrades its own tables the first time it starts, so this step mainly creates the empty database.
+
+### Step 5. Install the Python packages
+
+Create a virtual environment so the packages stay inside the project.
+
+```bat
+:: Windows
 py -m venv .venv
 .venv\Scripts\activate
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 ```
+```bash
+# Mac / Linux
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+```
 
-### 4. (Optional) Load demo data
+When the environment is active you will see `(.venv)` at the start of your terminal line. In VS Code, pick the interpreter from `.venv` (`Ctrl+Shift+P`, **Python: Select Interpreter**).
+
+### Step 6. (Optional) Load demo data
 
 ```bat
 C:\xampp\mysql\bin\mysql.exe -u root hawkeye_database < sql\seed_demo_data.sql
 ```
 
-Adds fictional patients, appointments, prescriptions and follow-ups. It is safe to run repeatedly. Demo emails use `example.test` and are never delivered.
+This adds fictional patients, appointments, prescriptions and follow-ups so the pages aren't empty. It is safe to run more than once. Demo emails use `example.test` and are never delivered.
 
-### 5. Run
+### Step 7. Run the app
 
-```bat
+```bash
 python app.py
 ```
 
-Open <http://127.0.0.1:5000>. Staff sign in at `/staff/login`, patients at `/patient/login`.
+Open <http://127.0.0.1:5000> in your browser.
+
+- Staff sign in at <http://127.0.0.1:5000/staff/login>
+- Patients sign in at <http://127.0.0.1:5000/patient/login>
+
+If you did not set `ADMIN_PASSWORD`, copy the one-time password printed in the terminal on first start. Press `Ctrl+C` in the terminal to stop the app.
+
+### Step 8. Check that it works
+
+- <http://127.0.0.1:5000/healthz> should respond without an error.
+- Sign in as the Admin and open the **Dashboard**.
+- (Optional) run the automated tests, see [Testing](#testing).
+
+### Every time you come back
+
+```bat
+.venv\Scripts\activate     :: Mac/Linux: source .venv/bin/activate
+python app.py
+```
+
+Make sure MySQL is running first. To pick up new changes from GitHub, run `git pull`, then `python -m pip install -r requirements.txt` in case dependencies changed.
 
 ---
 
@@ -302,6 +376,10 @@ Patient data lives in the database, so back it up.
 |---|---|
 | App won't start in production | The error lists every unsafe setting; fix each in `.env`. Check with `python -c "import app"`. |
 | Can't connect to MySQL | Confirm MySQL is running in XAMPP and `.env` host, port, user and password match. |
+| `python` or `py` not recognised | Reinstall Python and tick **Add Python to PATH**, then reopen the terminal. |
+| `ModuleNotFoundError` | The virtual environment isn't active, or packages aren't installed. Activate `.venv` and rerun `pip install -r requirements.txt`. |
+| `.env` missing after cloning from GitHub | Expected: it is never uploaded. Copy `.env.example` to `.env` and fill it in. |
+| Port 5000 already in use | Close the other program using it, or stop any earlier copy of the app. |
 | No emails arrive | Check the Gmail App Password and `MAIL_DEFAULT_SENDER`. Demo `example.test` addresses never deliver. |
 | QR code missing on two-step setup | Install dependencies (`segno`); the setup key can be typed in instead. |
 | Everyone is locked out behind a proxy | Set `TRUST_PROXY=true` and the right `PROXY_HOPS`. |
