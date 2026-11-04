@@ -471,29 +471,163 @@ class StaffBooking(unittest.TestCase):
             self.assertEqual(len(_sql('SELECT id FROM appointments WHERE date=%s AND time=%s AND branch_id=1', (day, '14:00'), fetch=True)), 1, f'double-booked on {day}')
 
 
-class PatientBookingRace(unittest.TestCase):
+class PatientRequests(unittest.TestCase):
+    """Patients cannot book. They can send ONE request at a time, which never reserves a slot; staff confirm or reject it."""
     def setUp(self): fix_cleanup(); clear_limits()
     def tearDown(self): fix_cleanup()
     def client(self, email):
         c = A.app.test_client(); self.assertEqual(login(c, '/patient/login', email, FIX_PW).status_code, 302); return c, token(c, '/patient/appointments')
-    def post(self, c, t, day, clock): return c.post('/patient/appointments', data=dict(branch_id='1', date=day, time=clock, type='Eye check', notes='', csrf_token=t))
+    def staff(self):
+        c = A.app.test_client(); self.assertEqual(login(c, '/staff/login', *STAFF).status_code, 302); return c
     def day(self, n): return (date.today() + timedelta(days=n)).isoformat()
-    def test_one_patient_double_clicking_gets_a_single_active_booking(self):
-        _, pid = mk_patient_user('dbl@fix.example.com', 'HK-FIX-DBL', 'Double Click')
+    def req(self, c, t, day, clock='10:00', **kw):
+        d = dict(date=day, time=clock, type='Eye check', notes='', csrf_token=t); d.update(kw)
+        return c.post('/patient/appointments/request', data=d)
+    def rows(self, pid, status=None):
+        q, a = 'SELECT id,status,date,time,request_only,branch_id FROM appointments WHERE patient_id=%s', (pid,)
+        if status: q, a = q + ' AND status=%s', (pid, status)
+        return _sql(q, a, fetch=True)
+    def notices(self, pid): return _sql("SELECT message FROM reminders WHERE patient_id=%s AND status='Notice'", (pid,), fetch=True)
+
+    def test_direct_post_to_the_appointments_page_is_rejected(self):
+        _, pid = mk_patient_user('direct@fix.example.com', 'HK-FIX-DR', 'Direct Pt'); c, t = self.client('direct@fix.example.com')
+        r = c.post('/patient/appointments', data=dict(branch_id='1', date=self.day(30), time='10:00', type='Eye check', csrf_token=t))
+        self.assertEqual(r.status_code, 405); self.assertEqual(self.rows(pid), [])
+    def test_availability_api_for_the_old_calendar_is_gone(self):
+        mk_patient_user('api@fix.example.com', 'HK-FIX-API', 'Api Pt'); c, _ = self.client('api@fix.example.com')
+        self.assertEqual(c.get('/api/appointment-availability?branch_id=1&month=2030-01').status_code, 404)
+    def test_request_form_is_shown_then_replaced_by_the_open_request(self):
+        mk_patient_user('form@fix.example.com', 'HK-FIX-FM', 'Form Pt'); c, t = self.client('form@fix.example.com')
+        self.assertIn('Send request', c.get('/patient/appointments').get_data(as_text=True))
+        self.assertEqual(self.req(c, t, self.day(20)).status_code, 302)
+        html = c.get('/patient/appointments').get_data(as_text=True)
+        self.assertIn('Withdraw request', html); self.assertNotIn('Send request', html)
+
+    def test_request_is_saved_as_requested_and_does_not_reserve_the_slot(self):
+        _, pid = mk_patient_user('res@fix.example.com', 'HK-FIX-RQ', 'Request Pt'); c, t = self.client('res@fix.example.com')
+        day = self.day(21); self.assertEqual(self.req(c, t, day, '9:30').status_code, 302)
+        row = self.rows(pid); self.assertEqual(len(row), 1)
+        self.assertEqual((row[0][1], row[0][2], row[0][3], row[0][4], row[0][5]), ('Requested', day, '09:30', 1, 1))   # canonical time, request flag, branch
+        # staff can still book that exact slot for someone else: a request is not a reservation
+        _, other = mk_patient_user('other@fix.example.com', 'HK-FIX-OT', 'Other Pt'); sc = self.staff()
+        r = sc.post('/staff/appointment/new', data=dict(patient_id=other, type='Eye check', date=day, time='09:30', notes='', csrf_token=token(sc, '/staff/appointment/new')))
+        self.assertEqual(r.status_code, 302); self.assertEqual(len(self.rows(other)), 1)
+    def test_only_one_open_request_even_when_double_clicked(self):
+        _, pid = mk_patient_user('dbl@fix.example.com', 'HK-FIX-DB', 'Double Click')
         sessions = [self.client('dbl@fix.example.com') for _ in range(6)]
-        race([(lambda c=c, t=t, i=i: self.post(c, t, self.day(30 + i), f'1{i}:00')) for i, (c, t) in enumerate(sessions)])
-        self.assertEqual(len(_sql('SELECT id FROM appointments WHERE patient_id=%s', (pid,), fetch=True)), 1)
-    def test_different_patients_cannot_take_the_same_slot(self):
-        sessions = []
-        for i in range(5):
-            mk_patient_user(f'slot{i}@fix.example.com', f'HK-FIX-S{i}', f'Slot Pt {i}'); sessions.append(self.client(f'slot{i}@fix.example.com'))
-        day = self.day(35)
-        race([(lambda c=c, t=t: self.post(c, t, day, '15:00')) for c, t in sessions])
-        self.assertEqual(len(_sql('SELECT id FROM appointments WHERE date=%s AND time=%s AND branch_id=1', (day, '15:00'), fetch=True)), 1)
-    def test_non_padded_time_is_stored_canonically(self):
-        _, pid = mk_patient_user('pad@fix.example.com', 'HK-FIX-PAD', 'Pad Pt'); c, t = self.client('pad@fix.example.com')
-        d = date.today() + timedelta(days=33); self.post(c, t, f'{d.year}-{d.month}-{d.day}', '9:05')
-        self.assertEqual(_sql('SELECT date,time FROM appointments WHERE patient_id=%s', (pid,), fetch=True), [(d.isoformat(), '09:05')])
+        race([(lambda c=c, t=t, i=i: self.req(c, t, self.day(30 + i), f'1{i}:00')) for i, (c, t) in enumerate(sessions)])
+        self.assertEqual(len(self.rows(pid, 'Requested')), 1)
+    def test_invalid_requests_create_nothing(self):
+        _, pid = mk_patient_user('bad@fix.example.com', 'HK-FIX-BD', 'Bad Pt'); c, t = self.client('bad@fix.example.com')
+        for kw in (dict(day=self.day(-1)), dict(day=self.day(5), clock='07:00'), dict(day=self.day(5), clock='18:00'),
+                   dict(day=self.day(5), type='Free glasses'), dict(day=self.day(5), notes='x' * 1001), dict(day='not-a-date')):
+            with self.subTest(kw=kw):
+                kw = dict(kw); day = kw.pop('day'); self.req(c, t, day, **kw); self.assertEqual(self.rows(pid), [])
+    def test_request_rate_limit(self):
+        _, pid = mk_patient_user('rate@fix.example.com', 'HK-FIX-RT', 'Rate Pt'); c, t = self.client('rate@fix.example.com')
+        for _ in range(6): A.rl_hit(A._rl_key('appt-request', str(pid)), 6, 3600)
+        self.req(c, t, self.day(9)); self.assertEqual(self.rows(pid), [])
+
+    def test_patient_can_withdraw_own_request_but_not_anothers(self):
+        _, pid = mk_patient_user('wd@fix.example.com', 'HK-FIX-WD', 'Withdraw Pt'); c, t = self.client('wd@fix.example.com')
+        self.req(c, t, self.day(12)); aid = self.rows(pid)[0][0]
+        _, other = mk_patient_user('thief@fix.example.com', 'HK-FIX-TF', 'Other Pt'); oc, ot = self.client('thief@fix.example.com')
+        self.assertEqual(oc.post(f'/patient/appointment/{aid}/withdraw', data=dict(csrf_token=ot)).status_code, 404)
+        self.assertEqual(self.rows(pid)[0][1], 'Requested')
+        self.assertEqual(c.post(f'/patient/appointment/{aid}/withdraw', data=dict(csrf_token=t)).status_code, 302)
+        self.assertEqual(_sql('SELECT status,reminder_status FROM appointments WHERE id=%s', (aid,), fetch=True), [('Cancelled', 'Request withdrawn')])
+    def test_patient_cannot_withdraw_a_confirmed_appointment(self):
+        _, pid = mk_patient_user('wc@fix.example.com', 'HK-FIX-WC', 'Confirmed Pt'); c, t = self.client('wc@fix.example.com')
+        aid = _sql("INSERT INTO appointments(patient_id,type,date,time,status,branch_id) VALUES(%s,'Eye check',%s,'10:00','Confirmed',1)", (pid, self.day(8)))
+        c.post(f'/patient/appointment/{aid}/withdraw', data=dict(csrf_token=t)); self.assertEqual(self.rows(pid)[0][1], 'Confirmed')
+
+    def test_staff_confirm_updates_status_and_tells_the_patient(self):
+        _, pid = mk_patient_user('cf@fix.example.com', 'HK-FIX-CF', 'Confirm Pt'); c, t = self.client('cf@fix.example.com')
+        self.req(c, t, self.day(14)); aid = self.rows(pid)[0][0]; sc = self.staff()
+        self.assertEqual(sc.post(f'/staff/appointment/{aid}/status/Confirmed', data=dict(csrf_token=token(sc, '/staff/appointment/new'))).status_code, 302)
+        self.assertEqual(self.rows(pid)[0][1], 'Confirmed')
+        self.assertTrue(any('confirmed' in m[0] for m in self.notices(pid)))
+    def test_staff_reject_updates_status_and_tells_the_patient(self):
+        _, pid = mk_patient_user('rj@fix.example.com', 'HK-FIX-RJ', 'Reject Pt'); c, t = self.client('rj@fix.example.com')
+        self.req(c, t, self.day(14)); aid = self.rows(pid)[0][0]; sc = self.staff()
+        sc.post(f'/staff/appointment/{aid}/status/Rejected', data=dict(csrf_token=token(sc, '/staff/appointment/new')))
+        self.assertEqual(self.rows(pid)[0][1], 'Rejected'); self.assertTrue(any('could not be accommodated' in m[0] for m in self.notices(pid)))
+    def test_confirm_is_blocked_when_the_slot_was_booked_meanwhile(self):
+        _, pid = mk_patient_user('cl@fix.example.com', 'HK-FIX-CL', 'Clash Pt'); c, t = self.client('cl@fix.example.com')
+        day = self.day(16); self.req(c, t, day, '11:00'); aid = self.rows(pid)[0][0]
+        _, other = mk_patient_user('first@fix.example.com', 'HK-FIX-FS', 'First Pt')
+        _sql("INSERT INTO appointments(patient_id,type,date,time,status,branch_id) VALUES(%s,'Eye check',%s,'11:00','Pending',1)", (other, day))
+        sc = self.staff(); sc.post(f'/staff/appointment/{aid}/status/Confirmed', data=dict(csrf_token=token(sc, '/staff/appointment/new')))
+        self.assertEqual(self.rows(pid)[0][1], 'Requested'); self.assertEqual(self.notices(pid), [])
+    def test_two_requests_for_one_slot_only_one_can_be_confirmed(self):
+        day = self.day(18); ids = []
+        for i in range(2):
+            _, pid = mk_patient_user(f'two{i}@fix.example.com', f'HK-FIX-T{i}', f'Two Pt {i}'); c, t = self.client(f'two{i}@fix.example.com')
+            self.req(c, t, day, '14:00'); ids.append((pid, self.rows(pid)[0][0]))
+        sc = self.staff(); tok = token(sc, '/staff/appointment/new')
+        for _, aid in ids: sc.post(f'/staff/appointment/{aid}/status/Confirmed', data=dict(csrf_token=tok))
+        self.assertEqual(sorted(self.rows(pid)[0][1] for pid, _ in ids), ['Confirmed', 'Requested'])
+
+    def test_rejected_request_is_not_shown_as_the_next_visit(self):
+        _, pid = mk_patient_user('nx@fix.example.com', 'HK-FIX-NX', 'Next Pt'); c, _ = self.client('nx@fix.example.com')
+        _sql("INSERT INTO appointments(patient_id,type,date,time,status,branch_id) VALUES(%s,'Eye check',%s,'10:00','Rejected',1)", (pid, self.day(6)))
+        html = c.get('/patient/home').get_data(as_text=True)
+        self.assertIn('No visit scheduled', html); self.assertNotIn('Your next visit', html)
+    def test_patient_cannot_use_the_reschedule_action(self):
+        _, pid = mk_patient_user('resch@fix.example.com', 'HK-FIX-RS', 'Resch Pt'); c, t = self.client('resch@fix.example.com')
+        aid = _sql("INSERT INTO appointments(patient_id,type,date,time,status,branch_id) VALUES(%s,'Eye check',%s,'10:00','Missed',1)", (pid, self.day(-3)))
+        self.assertEqual(c.post(f'/patient/appointment/{aid}/reschedule', data=dict(csrf_token=t)).status_code, 400)
+        self.assertEqual(self.rows(pid)[0][1], 'Missed')
+    def test_patient_can_still_dismiss_a_missed_visit(self):
+        _, pid = mk_patient_user('dis@fix.example.com', 'HK-FIX-DS', 'Dismiss Pt'); c, t = self.client('dis@fix.example.com')
+        aid = _sql("INSERT INTO appointments(patient_id,type,date,time,status,branch_id) VALUES(%s,'Eye check',%s,'10:00','Missed',1)", (pid, self.day(-3)))
+        self.assertEqual(c.post(f'/patient/appointment/{aid}/dismiss', data=dict(csrf_token=t)).status_code, 302)
+        self.assertEqual(self.rows(pid)[0][1], 'Cancelled')
+
+
+class NoShowAutomation(unittest.TestCase):
+    """Un-attended Pending/Confirmed visits become Missed after the grace period and reach the staff urgent list."""
+    def setUp(self):
+        fix_cleanup(); clear_limits(); _, self.pid = mk_patient_user('ns@fix.example.com', 'HK-FIX-NS', 'No Show Pt')
+    def tearDown(self): fix_cleanup()
+    def add(self, status, when):
+        return _sql("INSERT INTO appointments(patient_id,type,date,time,status,branch_id) VALUES(%s,'Eye check',%s,%s,%s,1)",
+                    (self.pid, when.strftime('%Y-%m-%d'), when.strftime('%H:%M'), status))
+    def status(self, aid): return _sql('SELECT status FROM appointments WHERE id=%s', (aid,), fetch=True)[0][0]
+    def test_only_old_unattended_visits_are_marked_missed(self):
+        now = datetime.now(); old = now - timedelta(minutes=A.MISSED_GRACE_MINUTES + 30)
+        recent = now - timedelta(minutes=10); future = now + timedelta(days=1)
+        confirmed_old, pending_old = self.add('Confirmed', old), self.add('Pending', old - timedelta(days=2))
+        confirmed_recent, confirmed_future = self.add('Confirmed', recent), self.add('Confirmed', future)
+        requested_old, requested_future = self.add('Requested', old), self.add('Requested', future)
+        attended_old, cancelled_old = self.add('Attended', old), self.add('Cancelled', old)
+        self.assertGreaterEqual(A.mark_missed_appointments(), 2)
+        self.assertEqual(self.status(confirmed_old), 'Missed'); self.assertEqual(self.status(pending_old), 'Missed')
+        for aid, want in ((confirmed_recent, 'Confirmed'), (confirmed_future, 'Confirmed'), (requested_old, 'Cancelled'), (requested_future, 'Requested'),
+                          (attended_old, 'Attended'), (cancelled_old, 'Cancelled')):
+            self.assertEqual(self.status(aid), want)
+    def test_open_request_whose_time_passed_is_expired_and_the_patient_is_told(self):
+        aid = self.add('Requested', datetime.now() - timedelta(hours=3))
+        self.assertGreaterEqual(A.mark_missed_appointments(), 1)
+        self.assertEqual(_sql('SELECT status,reminder_status FROM appointments WHERE id=%s', (aid,), fetch=True), [('Cancelled', 'Request expired')])
+        self.assertEqual(len(_sql("SELECT id FROM reminders WHERE patient_id=%s AND appointment_id=%s AND status='Notice'", (self.pid, aid), fetch=True)), 1)
+        A.mark_missed_appointments()          # second run must not add a second notice
+        self.assertEqual(len(_sql("SELECT id FROM reminders WHERE patient_id=%s AND appointment_id=%s AND status='Notice'", (self.pid, aid), fetch=True)), 1)
+    def test_job_is_idempotent_and_writes_an_audit_row(self):
+        aid = self.add('Confirmed', datetime.now() - timedelta(days=1))
+        A.mark_missed_appointments(); self.assertEqual(A.mark_missed_appointments(), 0)
+        rows = _sql("SELECT user_id FROM audit_logs WHERE entity='appointment' AND entity_id=%s AND action LIKE 'System marked%%'", (aid,), fetch=True)
+        self.assertEqual(rows, [(None,)])
+    def test_staff_can_correct_an_auto_marked_visit_to_attended(self):
+        aid = self.add('Confirmed', datetime.now() - timedelta(days=1)); A.mark_missed_appointments()
+        c = A.app.test_client(); login(c, '/staff/login', *STAFF)
+        r = c.post(f'/staff/appointment/{aid}/status/Attended', data=dict(csrf_token=token(c, '/staff/dashboard')))
+        self.assertEqual(r.status_code, 302); self.assertEqual(self.status(aid), 'Attended')
+        A.mark_missed_appointments(); self.assertEqual(self.status(aid), 'Attended')
+    def test_confirmed_visit_from_a_past_day_shows_on_the_dashboard_before_the_job_runs(self):
+        self.add('Confirmed', datetime.now() - timedelta(days=2))
+        c = A.app.test_client(); login(c, '/staff/login', *STAFF)
+        self.assertIn('No Show Pt', c.get('/staff/dashboard').get_data(as_text=True))
 
 
 if __name__ == '__main__':

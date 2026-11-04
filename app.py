@@ -228,6 +228,52 @@ def send_due_reminders():
     c.close()
     for aid in ids: send_appointment_email(aid, 'automatic reminder')
 
+# How long after its start time a Pending/Confirmed appointment may stay un-attended before the
+# system treats it as a no-show. Staff should mark patients Attended when they arrive.
+try: MISSED_GRACE_MINUTES = max(30, int(os.getenv('MISSED_GRACE_MINUTES', '120')))
+except ValueError: MISSED_GRACE_MINUTES = 120
+
+# Scheduled job (every 15 min): marks Pending or Confirmed appointments as Missed once the start
+# time is more than MISSED_GRACE_MINUTES in the past and nobody marked them Attended/Completed.
+# Open patient requests ('Requested') are never marked Missed (the clinic never promised a slot); once
+# their requested time has passed they are closed as 'Request expired'.
+# Returns how many appointments were changed. Safe to run repeatedly.
+def mark_missed_appointments():
+    """Background job: turn un-attended past appointments into Missed so staff see them."""
+    now = datetime.now(); cutoff = now - timedelta(minutes=MISSED_GRACE_MINUTES)
+    c = db()
+    try:
+        rows = c.execute("SELECT id,date,time FROM appointments WHERE status IN ('Pending','Confirmed') AND date<=?",
+                         (cutoff.strftime('%Y-%m-%d'),)).fetchall()
+        marked = 0
+        for r in rows:
+            try: start = datetime.strptime(f"{r['date']} {r['time']}", '%Y-%m-%d %H:%M')
+            except (TypeError, ValueError): continue
+            if start > cutoff: continue
+            # The status guard means a staff change made a moment ago (Attended, Cancelled...) always wins.
+            cur = c.execute("UPDATE appointments SET status='Missed' WHERE id=? AND status IN ('Pending','Confirmed')", (r['id'],))
+            if cur.rowcount:
+                marked += 1
+                c.execute('INSERT INTO audit_logs(user_id,action,entity,entity_id,created_at) VALUES(?,?,?,?,?)',
+                          (None, 'System marked appointment as Missed (not attended after grace period)', 'appointment', r['id'], now.strftime('%Y-%m-%d %H:%M:%S')))
+        # An open request whose requested time has passed can no longer be honoured: close it and tell the patient.
+        expired = 0
+        for r in c.execute("SELECT id,patient_id,type,date,time FROM appointments WHERE status='Requested' AND date<=?", (now.strftime('%Y-%m-%d'),)).fetchall():
+            try: start = datetime.strptime(f"{r['date']} {r['time']}", '%Y-%m-%d %H:%M')
+            except (TypeError, ValueError): continue
+            if start > now: continue
+            cur = c.execute("UPDATE appointments SET status='Cancelled',reminder_status='Request expired' WHERE id=? AND status='Requested'", (r['id'],))
+            if cur.rowcount:
+                expired += 1
+                post_website_reminder(c, r['patient_id'], r['id'], f"Your {r['type'].lower()} request for {r['date']} at {r['time']} expired because that time passed without a reply. Please send a new request or message the clinic.", 'In-app', 'Notice')
+                c.execute('INSERT INTO audit_logs(user_id,action,entity,entity_id,created_at) VALUES(?,?,?,?,?)',
+                          (None, 'System closed an appointment request whose time had passed', 'appointment', r['id'], now.strftime('%Y-%m-%d %H:%M:%S')))
+        c.commit()
+        if marked or expired: app.logger.info('Marked %s appointment(s) Missed and expired %s request(s)', marked, expired)
+        return marked + expired
+    finally:
+        c.close()
+
 
 
 class DBRow(dict):
@@ -1271,7 +1317,7 @@ def dashboard():
             'appointments': count("SELECT COUNT(*) FROM appointments WHERE date=? AND status NOT IN ('Cancelled','Rejected')", (today,)),
             'pending': count("SELECT COUNT(*) FROM appointments WHERE status IN ('Pending','Requested')"),
             'followups': count("SELECT COUNT(*) FROM appointments WHERE type IN ('Follow-up','Prescription review') AND date>=? AND status NOT IN ('Cancelled','Rejected','Completed')", (today,)),
-            'overdue': count("SELECT COUNT(*) FROM appointments WHERE status IN ('Pending','Requested','Missed') AND date<?", (today,)),
+            'overdue': count("SELECT COUNT(*) FROM appointments WHERE status IN ('Pending','Requested','Confirmed','Missed') AND date<?", (today,)),
             'reminders': count("SELECT COUNT(*) FROM reminders WHERE status='Sent'"),
             'new_patients': count("SELECT COUNT(*) FROM patients p WHERE EXISTS (SELECT 1 FROM appointments a WHERE a.patient_id=p.id AND a.id=(SELECT MIN(a2.id) FROM appointments a2 WHERE a2.patient_id=p.id) AND a.date>=?)", ((date.today()-timedelta(days=7)).isoformat(),)),
         }
@@ -1291,7 +1337,7 @@ def dashboard():
             'appointments': count("SELECT COUNT(*) FROM appointments WHERE date=? AND branch_id=? AND status NOT IN ('Cancelled','Rejected')", (today, branch_id)),
             'pending': count("SELECT COUNT(*) FROM appointments WHERE status IN ('Pending','Requested') AND branch_id=?", (branch_id,)),
             'followups': count("SELECT COUNT(*) FROM appointments WHERE type IN ('Follow-up','Prescription review') AND date>=? AND branch_id=? AND status NOT IN ('Cancelled','Rejected','Completed')", (today, branch_id)),
-            'overdue': count("SELECT COUNT(*) FROM appointments WHERE status IN ('Pending','Requested','Missed') AND date<? AND branch_id=?", (today, branch_id)),
+            'overdue': count("SELECT COUNT(*) FROM appointments WHERE status IN ('Pending','Requested','Confirmed','Missed') AND date<? AND branch_id=?", (today, branch_id)),
             'reminders': count("SELECT COUNT(*) FROM reminders r JOIN patients p ON p.id=r.patient_id WHERE r.status='Sent' AND p.branch_id=?", (branch_id,)),
             'new_patients': count("SELECT COUNT(*) FROM patients p WHERE p.branch_id=? AND EXISTS (SELECT 1 FROM appointments a WHERE a.patient_id=p.id AND a.id=(SELECT MIN(a2.id) FROM appointments a2 WHERE a2.patient_id=p.id) AND a.date>=?)", (branch_id, (date.today()-timedelta(days=7)).isoformat())),
         }
@@ -1306,9 +1352,9 @@ def dashboard():
                           WHEN a.status='Missed' THEN 4 ELSE 5 END,
                      a.date ASC, a.time ASC LIMIT 12""", (branch_id,today,today,today,today)).fetchall()
     if session.get('role')=='Admin':
-        urgent=c.execute("SELECT a.id AS appointment_id,a.status,a.date,a.time,a.type,p.id AS pid,p.name,p.email,p.phone,p.patient_id AS code FROM appointments a JOIN patients p ON p.id=a.patient_id WHERE COALESCE(a.reminder_status,'')!='Resolved' AND (a.status IN ('Missed','Incomplete') OR (a.status IN ('Pending','Requested') AND a.date<=?)) ORDER BY a.date,a.time LIMIT 30",(today,)).fetchall()
+        urgent=c.execute("SELECT a.id AS appointment_id,a.status,a.date,a.time,a.type,p.id AS pid,p.name,p.email,p.phone,p.patient_id AS code FROM appointments a JOIN patients p ON p.id=a.patient_id WHERE COALESCE(a.reminder_status,'')!='Resolved' AND (a.status IN ('Missed','Incomplete') OR (a.status IN ('Pending','Requested') AND a.date<=?) OR (a.status='Confirmed' AND a.date<?)) ORDER BY a.date,a.time LIMIT 30",(today,today)).fetchall()
     else:
-        urgent=c.execute("SELECT a.id AS appointment_id,a.status,a.date,a.time,a.type,p.id AS pid,p.name,p.email,p.phone,p.patient_id AS code FROM appointments a JOIN patients p ON p.id=a.patient_id WHERE p.branch_id=? AND COALESCE(a.reminder_status,'')!='Resolved' AND (a.status IN ('Missed','Incomplete') OR (a.status IN ('Pending','Requested') AND a.date<=?)) ORDER BY a.date,a.time LIMIT 30",(branch_id,today)).fetchall()
+        urgent=c.execute("SELECT a.id AS appointment_id,a.status,a.date,a.time,a.type,p.id AS pid,p.name,p.email,p.phone,p.patient_id AS code FROM appointments a JOIN patients p ON p.id=a.patient_id WHERE p.branch_id=? AND COALESCE(a.reminder_status,'')!='Resolved' AND (a.status IN ('Missed','Incomplete') OR (a.status IN ('Pending','Requested') AND a.date<=?) OR (a.status='Confirmed' AND a.date<?)) ORDER BY a.date,a.time LIMIT 30",(branch_id,today,today)).fetchall()
     c.close()
     return render_template('dashboard.html', stats=stats, appts=appts, urgent=urgent, today=today, latest_appointment_id=max_id)
 
@@ -1626,7 +1672,7 @@ def appointment_new():
             with db_locks(*lock_names) as got:
                 if not got: flash('Another booking is being saved right now. Please try again in a moment.','error'); return redirect(url_for('appointment_new'))
                 c.execute('START TRANSACTION')        # fresh snapshot: sees anything committed while we waited for the lock
-                if c.execute("SELECT 1 FROM appointments WHERE date=? AND time=? AND branch_id=? AND status NOT IN ('Cancelled','Completed','Rejected') LIMIT 1",(day,clock,branch_id)).fetchone():
+                if c.execute("SELECT 1 FROM appointments WHERE date=? AND time=? AND branch_id=? AND status NOT IN ('Cancelled','Completed','Rejected','Requested') LIMIT 1",(day,clock,branch_id)).fetchone():
                     c.rollback(); flash('That time slot is already booked at this branch. Choose another time.','error'); return redirect(url_for('appointment_new'))
                 if doc and _doctor_hour_busy(c, doc['id'], day, clock):
                     c.rollback(); flash(f"{doc['name']} already has a patient booked in that hour. Pick another hour or doctor.",'error'); return redirect(url_for('appointment_new'))
@@ -1654,12 +1700,28 @@ def appointment_status(aid,status):
     c=db(); a=c.execute('SELECT * FROM appointments WHERE id=?',(aid,)).fetchone()
     if not a: c.close(); flash('Appointment not found.','error'); return redirect(url_for('appointments'))
     if session.get('role')!='Admin' and a['branch_id']!=(session.get('branch_id') or 1): c.close(); return 'Forbidden: appointment belongs to another branch',403
-    c.execute("UPDATE appointments SET status=?,request_only=CASE WHEN ? IN ('Confirmed','Rejected') THEN 0 ELSE request_only END WHERE id=?",(status,status,aid))
-    if status in {'Completed','Attended'}:
-        existing=c.execute('SELECT id FROM patient_sessions WHERE patient_id=? AND visit_date=? AND visit_type=?',(a['patient_id'],a['date'],a['type'])).fetchone()
-        if not existing:
-            ts=datetime.now().strftime('%Y-%m-%d %H:%M:%S'); c.execute('INSERT INTO patient_sessions(patient_id,visit_date,visit_type,notes,outcome,recorded_by,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?)',(a['patient_id'],a['date'],a['type'],a['notes'] or '',status,session.get('uid'),ts,ts))
-    log_staff_action(c,'Changed appointment status to '+status,'appointment',aid); c.commit(); c.close()
+    was_request = a['status']=='Requested'
+    # Requests never reserve a slot, so confirming one must re-check that the time is still free.
+    lock_names = [f"hawkeye:slot:{a['branch_id'] or 1}:{a['date']}:{a['time']}"] if (status=='Confirmed' and was_request and a['date'] and a['time']) else []
+    with db_locks(*lock_names) as got:
+        if not got:
+            c.close(); flash('Another change is being saved right now. Please try again in a moment.','error'); return redirect(request.referrer or url_for('appointments'))
+        if lock_names:
+            clash=c.execute("SELECT 1 FROM appointments WHERE date=? AND time=? AND branch_id=? AND id!=? AND status NOT IN ('Cancelled','Completed','Rejected','Requested') LIMIT 1",(a['date'],a['time'],a['branch_id'] or 1,aid)).fetchone()
+            if clash:
+                c.close(); flash('That time is already booked at this branch, so the request was not confirmed. Reject it and ask the patient for another time.','error'); return redirect(request.referrer or url_for('appointments'))
+        c.execute("UPDATE appointments SET status=?,request_only=CASE WHEN ? IN ('Confirmed','Rejected') THEN 0 ELSE request_only END WHERE id=?",(status,status,aid))
+        if status in {'Completed','Attended'}:
+            existing=c.execute('SELECT id FROM patient_sessions WHERE patient_id=? AND visit_date=? AND visit_type=?',(a['patient_id'],a['date'],a['type'])).fetchone()
+            if not existing:
+                ts=datetime.now().strftime('%Y-%m-%d %H:%M:%S'); c.execute('INSERT INTO patient_sessions(patient_id,visit_date,visit_type,notes,outcome,recorded_by,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?)',(a['patient_id'],a['date'],a['type'],a['notes'] or '',status,session.get('uid'),ts,ts))
+        if was_request and status in {'Confirmed','Rejected'}:
+            # Tell the patient the outcome of their request (shown under Reminders; not counted as a sent reminder).
+            when=f"{a['date']} at {a['time']}"
+            msg=(f"Your {a['type'].lower()} request for {when} was confirmed. See you then." if status=='Confirmed'
+                 else f"Your {a['type'].lower()} request for {when} could not be accommodated. Please send a new request or message the clinic to choose another time.")
+            post_website_reminder(c,a['patient_id'],aid,msg,'In-app','Notice')
+        log_staff_action(c,'Changed appointment status to '+status,'appointment',aid); c.commit(); c.close()
     flash('Appointment status updated.','ok'); return redirect(request.referrer or url_for('appointments'))
 
 
@@ -2310,42 +2372,12 @@ def email_test():
 @patient_record_required
 def patient_home():
     if session.get('role')!='Patient':return redirect(url_for('dashboard'))
-    p=patient_for_user(); c=db(); a=c.execute("SELECT * FROM appointments WHERE patient_id=? AND date>=? AND status NOT IN ('Cancelled','Completed') ORDER BY date,time LIMIT 1",(p['id'],date.today().isoformat())).fetchone(); rx=c.execute('SELECT * FROM prescriptions WHERE patient_id=? ORDER BY recorded DESC LIMIT 1',(p['id'],)).fetchone(); new_reminders=c.execute("SELECT * FROM reminders WHERE patient_id=? AND read_status='Unread' ORDER BY id DESC LIMIT 3",(p['id'],)).fetchall(); c.close(); return render_template('patient_home.html',p=p,a=a,rx=rx,new_reminders=new_reminders)
-# Route: GET /api/appointment-availability  |  Access: signed-in patients only
-@app.route('/api/appointment-availability')
-@login_required
-def appointment_availability():
-    """Return booked dates and time slots for a branch and month for the patient calendar."""
-    try:
-        branch_id = int(request.args.get('branch_id', ''))
-        month_value = request.args.get('month', '')
-        month_start = datetime.strptime(month_value + '-01', '%Y-%m-%d').date()
-        next_month = date(month_start.year + (month_start.month == 12), 1 if month_start.month == 12 else month_start.month + 1, 1)
-    except (TypeError, ValueError):
-        return jsonify(ok=False, error='Choose a valid branch and calendar month.'), 400
-
-    c = db()
-    branch = c.execute('SELECT id FROM branches WHERE id=? AND active=1', (branch_id,)).fetchone()
-    if not branch:
-        c.close()
-        return jsonify(ok=True, dates={}, message='Select an active clinic branch to view availability.')
-    rows = c.execute(
-        "SELECT date, time, COUNT(*) AS count FROM appointments "
-        "WHERE branch_id=? AND date>=? AND date<? "
-        "AND status NOT IN ('Cancelled','Completed','Rejected') "
-        "GROUP BY date,time ORDER BY date,time",
-        (branch_id, month_start.isoformat(), next_month.isoformat())
-    ).fetchall()
-    c.close()
-    dates = {}
-    for row in rows:
-        dates.setdefault(row['date'], []).append(row['time'])
-    return jsonify(ok=True, dates=dates, month=month_value)
-
-# Patient appointments page: lists visits and books a new one (branch, date, time, reason).
-# Only one active booking at a time and no double-booking a slot.
-# Route: GET/POST /patient/appointments  |  Access: signed-in patients only
-@app.route('/patient/appointments', methods=['GET', 'POST'])
+    p=patient_for_user(); c=db(); a=c.execute("SELECT * FROM appointments WHERE patient_id=? AND date>=? AND status IN ('Requested','Pending','Confirmed') ORDER BY date,time LIMIT 1",(p['id'],date.today().isoformat())).fetchone(); rx=c.execute('SELECT * FROM prescriptions WHERE patient_id=? ORDER BY recorded DESC LIMIT 1',(p['id'],)).fetchone(); new_reminders=c.execute("SELECT * FROM reminders WHERE patient_id=? AND read_status='Unread' ORDER BY id DESC LIMIT 3",(p['id'],)).fetchall(); c.close(); return render_template('patient_home.html',p=p,a=a,rx=rx,new_reminders=new_reminders)
+# Patient appointments page: lists the patient's visits, follow-ups due and missed visits, and
+# holds the request form. Patients never book directly: a request only asks the clinic for a time,
+# and staff confirm or reject it.
+# Route: GET /patient/appointments  |  Access: signed-in patients only
+@app.route('/patient/appointments')
 @login_required
 def patient_appointments():
     p = patient_for_user()
@@ -2353,89 +2385,12 @@ def patient_appointments():
         flash('Your patient profile could not be found. Please contact the clinic.', 'error')
         return redirect(url_for('patient_home'))
     c = db()
-    branches = c.execute("SELECT id, name, address FROM branches WHERE active=1 ORDER BY name").fetchall()
-
-    if request.method == 'POST':
-        try:
-            branch_id = int(request.form.get('branch_id', ''))
-            appointment_date = request.form.get('date', '').strip()
-            appointment_time = request.form.get('time', '').strip()
-            chosen = datetime.strptime(appointment_date + ' ' + appointment_time, '%Y-%m-%d %H:%M')
-        except (ValueError, TypeError):
-            c.close()
-            flash('Please select a valid branch, date, and time.', 'error')
-            return redirect(url_for('patient_appointments'))
-
-        appointment_date, appointment_time = chosen.strftime('%Y-%m-%d'), chosen.strftime('%H:%M')   # canonical text ('9:30' -> '09:30')
-        branch = next((b for b in branches if b['id'] == branch_id), None)
-        appointment_type = request.form.get('type', '').strip()
-        notes = request.form.get('notes', '').strip()
-        allowed_types = {'Eye check', 'Follow-up', 'Prescription review'}
-        if not branch:
-            c.close(); flash('Please select an active clinic branch.', 'error')
-            return redirect(url_for('patient_appointments'))
-        if appointment_type not in allowed_types or len(notes) > 1000:
-            c.close(); flash('Please choose a valid visit reason. Notes must be 1,000 characters or fewer.', 'error')
-            return redirect(url_for('patient_appointments'))
-        if chosen <= datetime.now():
-            c.close(); flash('Please choose a future appointment date and time.', 'error')
-            return redirect(url_for('patient_appointments'))
-
-        try:
-            # Two named DB locks make check-then-insert atomic across every worker process: one per patient
-            # (one active booking at a time) and one per branch slot (no double-booking).
-            with db_locks(f'hawkeye:book-patient:{p["id"]}', f'hawkeye:slot:{branch_id}:{appointment_date}:{appointment_time}') as got:
-                if not got:
-                    c.close()
-                    flash('We are saving another booking right now. Please try again in a moment.', 'error')
-                    return redirect(url_for('patient_appointments'))
-                c.execute('START TRANSACTION')        # fresh snapshot: sees anything committed while we waited for the locks
-                active = c.execute("""SELECT id,date,time,status FROM appointments
-                    WHERE patient_id=? AND status NOT IN ('Cancelled','Completed','Rejected','Missed','Ignored','Resolved')
-                    AND (request_only=1 OR status IN ('Pending','Requested','Confirmed','Attended'))
-                    ORDER BY date,time LIMIT 1""", (p['id'],)).fetchone()
-                if active:
-                    c.rollback(); c.close()
-                    flash(f"You already have an active appointment ({active['date']} at {active['time']}, {active['status']}). You cannot submit another booking until this one is cancelled, rejected, or completed.", 'error')
-                    return redirect(url_for('patient_appointments'))
-
-                conflict = c.execute("""SELECT 1 FROM appointments
-                    WHERE date=? AND time=? AND branch_id=?
-                    AND status NOT IN ('Cancelled','Completed','Rejected') LIMIT 1""",
-                    (appointment_date, appointment_time, branch_id)).fetchone()
-                if conflict:
-                    c.rollback(); c.close()
-                    flash('That time slot has already been requested or booked at this branch. Please choose another time.', 'error')
-                    return redirect(url_for('patient_appointments'))
-
-                cur = c.execute("""INSERT INTO appointments
-                    (patient_id,type,date,time,status,reminder_status,notes,request_only,branch_id)
-                    VALUES(?,?,?,?,'Requested','Waiting',?,1,?)""",
-                    (p['id'], appointment_type, appointment_date, appointment_time, notes, branch_id))
-                appointment_id = cur.lastrowid
-                c.commit()
-                c.close()
-            app.logger.info('Appointment request %s saved for patient %s', appointment_id, p['id'])
-            flash('Transaction saved successfully. Your appointment request has been recorded and is waiting for clinic confirmation.', 'ok')
-            return redirect(url_for('patient_appointments'))
-        except MySQLError:
-            try: c.rollback(); c.close()
-            except Exception: pass
-            app.logger.exception('Could not save appointment for patient %s', p['id'])
-            flash('We could not save your appointment because of a database error. Please try again.', 'error')
-            return redirect(url_for('patient_appointments'))
-
     rows = c.execute("""SELECT a.*, b.name AS branch_name
         FROM appointments a LEFT JOIN branches b ON b.id=a.branch_id
         WHERE a.patient_id=? ORDER BY
           CASE WHEN a.status NOT IN ('Cancelled','Completed','Rejected') THEN 0 ELSE 1 END,
           CASE WHEN a.date>=? THEN 0 ELSE 1 END, a.date ASC, a.time ASC""",
         (p['id'], date.today().isoformat())).fetchall()
-    active_appointment = c.execute("""SELECT a.*,b.name AS branch_name FROM appointments a
-        LEFT JOIN branches b ON b.id=a.branch_id WHERE a.patient_id=?
-        AND a.status NOT IN ('Cancelled','Completed','Rejected','Missed','Ignored','Resolved')
-        AND (a.request_only=1 OR a.status IN ('Pending','Requested','Confirmed','Attended'))
-        ORDER BY a.date,a.time LIMIT 1""", (p['id'],)).fetchone()
     followups_due = c.execute("""SELECT a.*,b.name AS branch_name FROM appointments a
         LEFT JOIN branches b ON b.id=a.branch_id WHERE a.patient_id=?
         AND a.type IN ('Follow-up','Prescription review')
@@ -2443,18 +2398,78 @@ def patient_appointments():
         AND a.date>=? AND COALESCE(a.reminder_status,'')!='Acknowledged'
         ORDER BY a.date,a.time""", (p['id'], date.today().isoformat())).fetchall()
     missed_rows = c.execute("SELECT * FROM appointments WHERE patient_id=? AND status IN ('Missed','Incomplete') ORDER BY date DESC,time DESC", (p['id'],)).fetchall()
+    open_request = c.execute("SELECT * FROM appointments WHERE patient_id=? AND status='Requested' ORDER BY date,time LIMIT 1", (p['id'],)).fetchone()
     c.close()
-    return render_template('patient_appointments.html', p=p, rows=rows, branches=branches,
-                           active_appointment=active_appointment, followups_due=followups_due, missed_rows=missed_rows)
-# Patient actions on an appointment: acknowledge a follow-up ('comply'), 'reschedule', or
-# 'dismiss' a missed one.
+    return render_template('patient_appointments.html', p=p, rows=rows, followups_due=followups_due, missed_rows=missed_rows,
+                           open_request=open_request, today=date.today().isoformat(),
+                           request_types=REQUEST_TYPES, open_hour=CLINIC_OPEN_HOUR, close_hour=CLINIC_CLOSE_HOUR)
+
+REQUEST_TYPES = ('Eye check', 'Follow-up', 'Prescription review')
+
+# Patient asks the clinic for a time. This only creates a 'Requested' row: it does NOT reserve the
+# slot, so staff can still book that time for someone else. Staff Confirm or Reject it.
+# One open request per patient; at most 6 requests per hour.
+# Route: POST /patient/appointments/request  |  Access: signed-in patients only
+@app.route('/patient/appointments/request', methods=['POST'])
+@login_required
+def patient_appointment_request():
+    p = patient_for_user()
+    if not p:
+        flash('Your patient profile could not be found. Please contact the clinic.', 'error')
+        return redirect(url_for('patient_home'))
+    back = redirect(url_for('patient_appointments') + '#requestForm')
+    rl_key = _rl_key('appt-request', str(p['id']))
+    if rl_locked_seconds(rl_key):
+        flash('You have sent several requests recently. Please wait a while, or message the clinic.', 'error')
+        return back
+    try:
+        chosen = datetime.strptime(request.form.get('date', '').strip() + ' ' + request.form.get('time', '').strip(), '%Y-%m-%d %H:%M')
+    except (ValueError, TypeError):
+        flash('Please choose a valid date and time.', 'error'); return back
+    day, clock = chosen.strftime('%Y-%m-%d'), chosen.strftime('%H:%M')      # canonical text ('9:30' -> '09:30')
+    appt_type = request.form.get('type', '').strip()
+    notes = request.form.get('notes', '').strip()
+    if appt_type not in REQUEST_TYPES or len(notes) > 1000:
+        flash('Please choose a valid visit reason. Notes must be 1,000 characters or fewer.', 'error'); return back
+    if chosen <= datetime.now():
+        flash('Please choose a future date and time.', 'error'); return back
+    if not (CLINIC_OPEN_HOUR <= chosen.hour < CLINIC_CLOSE_HOUR):
+        flash(f'Please choose a time between {CLINIC_OPEN_HOUR:02d}:00 and {CLINIC_CLOSE_HOUR - 1:02d}:59.', 'error'); return back
+    branch_id = p['branch_id'] or 1
+    c = db()
+    try:
+        # The patient lock makes "one open request" safe even if the button is double-clicked.
+        with db_locks(f'hawkeye:request-patient:{p["id"]}') as got:
+            if not got:
+                flash('We are saving another request right now. Please try again in a moment.', 'error'); return back
+            c.execute('START TRANSACTION')
+            open_req = c.execute("SELECT date,time FROM appointments WHERE patient_id=? AND status='Requested' LIMIT 1", (p['id'],)).fetchone()
+            if open_req:
+                c.rollback()
+                flash(f"You already have an open request ({open_req['date']} at {open_req['time']}). Withdraw it first, or wait for the clinic to reply.", 'error'); return back
+            cur = c.execute("""INSERT INTO appointments(patient_id,type,date,time,status,reminder_status,notes,request_only,branch_id)
+                VALUES(?,?,?,?,'Requested','Waiting',?,1,?)""", (p['id'], appt_type, day, clock, notes, branch_id))
+            c.commit()
+        app.logger.info('Appointment request %s saved for patient %s', cur.lastrowid, p['id'])
+    except MySQLError:
+        try: c.rollback()
+        except Exception: pass
+        app.logger.exception('Could not save appointment request for patient %s', p['id'])
+        flash('We could not save your request because of a database error. Please try again.', 'error'); return back
+    finally:
+        c.close()
+    rl_hit(rl_key, 6, 3600)
+    flash('Request sent. The clinic will confirm a time, or reply if that time is not available. Your slot is not reserved until it is confirmed.', 'ok')
+    return redirect(url_for('patient_appointments'))
+# Patient actions on an appointment: acknowledge a follow-up ('comply'), 'withdraw' an open
+# request, or 'dismiss' a missed visit. Only the clinic can confirm or book a time.
 # Route: POST /patient/appointment/<int:aid>/<action>  |  Access: signed-in patients only
 @app.route('/patient/appointment/<int:aid>/<action>', methods=['POST'])
 @login_required
 def patient_appointment_action(aid, action):
     if session.get('role') != 'Patient':
         return redirect(url_for('dashboard'))
-    if action not in {'comply', 'reschedule', 'dismiss'}:
+    if action not in {'comply', 'withdraw', 'dismiss'}:
         return 'Invalid appointment action', 400
     patient = patient_for_user()
     if not patient:
@@ -2476,23 +2491,24 @@ def patient_appointment_action(aid, action):
         c.close()
         flash('Follow-up acknowledged. Your appointment remains scheduled; please wait for clinic confirmation if it is still pending.', 'ok')
         return redirect(url_for('patient_appointments'))
+    if action == 'withdraw':
+        cur = c.execute("UPDATE appointments SET status='Cancelled',reminder_status='Request withdrawn' WHERE id=? AND patient_id=? AND status='Requested'", (aid, patient['id']))
+        c.commit(); c.close()
+        flash('Your request was withdrawn.' if cur.rowcount else 'Only an open request can be withdrawn.', 'ok' if cur.rowcount else 'error')
+        return redirect(url_for('patient_appointments'))
     if appt['status'] not in {'Missed', 'Incomplete'}:
         c.close()
         flash('This action is only available for missed or incomplete appointments.', 'error')
         return redirect(url_for('patient_appointments'))
-    new_status = 'Reschedule requested' if action == 'reschedule' else 'Dismissed by patient'
+    new_status = 'Dismissed by patient'
     note = (appt['notes'] or '').strip()
-    action_note = 'Patient requested rescheduling after a missed visit.' if action == 'reschedule' else 'Patient dismissed the missed appointment.'
-    updated_note = (note + ('\n' if note else '') + action_note)[:2000]
+    updated_note = (note + ('\n' if note else '') + 'Patient dismissed the missed appointment.')[:2000]
     c.execute("UPDATE appointments SET status='Cancelled',reminder_status=?,notes=? WHERE id=? AND patient_id=?",
               (new_status, updated_note, aid, patient['id']))
     c.execute("UPDATE reminders SET read_status='Read' WHERE appointment_id=? AND patient_id=?", (aid, patient['id']))
     c.commit()
     c.close()
-    if action == 'reschedule':
-        flash('The missed appointment has been cleared from urgent items. Choose a new date below to request a replacement appointment.', 'ok')
-    else:
-        flash('The missed appointment was dismissed. The original record is retained in your history.', 'ok')
+    flash('The missed appointment was dismissed. The original record is retained in your history. To get a new time, send a request or message the clinic.', 'ok')
     return redirect(url_for('patient_appointments'))
 
 
@@ -2533,6 +2549,7 @@ scheduler = BackgroundScheduler(daemon=True)
 scheduler.add_job(exclusive('appointment_reminders', send_due_reminders), 'interval', minutes=15, id='appointment_email_reminders', replace_existing=True)
 scheduler.add_job(exclusive('prescription_reminders', send_due_prescription_reminders), 'interval', hours=1, id='prescription_followup_emails', replace_existing=True)
 scheduler.add_job(exclusive('purge_stale_rows', purge_stale_rows), 'interval', hours=6, id='purge_stale_rows', replace_existing=True)
+scheduler.add_job(exclusive('mark_missed', mark_missed_appointments), 'interval', minutes=15, id='mark_missed_appointments', replace_existing=True)
 
 def bootstrap():
     """Create/upgrade the tables and start the reminder scheduler.

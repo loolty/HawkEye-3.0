@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>HawkEye Optical Clinic · Book eye care and see your prescription online</title>
-<meta name="description" content="HawkEye Optical Clinic: book your visit, see your prescription and get follow-up reminders from one patient portal.">
+<title>HawkEye Optical Clinic · See your prescription and follow-ups online</title>
+<meta name="description" content="HawkEye Optical Clinic: see your prescription, track your visits and get follow-up reminders from one patient portal.">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/tokens.css') }}">
 <style>
 :root{--bg:var(--canvas);--bg2:var(--surface-2);--muted:var(--text-2);--accent-dark:var(--accent-hover);--field:var(--ink-solid);--field-ink:var(--ink-solid-text);--field-soft:#aab2be}
@@ -135,7 +135,7 @@ footer .wrap>div{display:flex;flex-wrap:wrap;gap:24px 48px;justify-content:space
     </nav>
     {% with tt='' %}{% include '_theme_toggle.html' %}{% endwith %}
     <a class="btn sm ghost" href="{{ url_for('patient_login') }}">Patient login</a>
-    <a class="btn sm primary" href="{{ url_for('patient_login') }}">Book a visit</a>
+    <a class="btn sm primary" href="{{ url_for('signup') }}">Create account</a>
   </div>
 </header>
 
@@ -144,9 +144,9 @@ footer .wrap>div{display:flex;flex-wrap:wrap;gap:24px 48px;justify-content:space
     <div class="wrap">
       <div>
         <h1>Your eye care, in clear focus.</h1>
-        <p class="lede">Book your visit, see your prescription and get a reminder before your follow-up, all from this website. No phone calls, no paper records.</p>
+        <p class="lede">See your prescription, track your visits, get a reminder before your follow-up and message your clinic, all from this website. Request a visit and the clinic confirms it.</p>
         <div class="actions">
-          <a class="btn primary" href="{{ url_for('patient_login') }}">Book a visit</a>
+          <a class="btn primary" href="{{ url_for('patient_login') }}">Patient login</a>
           <a class="btn" href="{{ url_for('signup') }}">New here? Create an account</a>
         </div>
       </div>
@@ -164,9 +164,9 @@ footer .wrap>div{display:flex;flex-wrap:wrap;gap:24px 48px;justify-content:space
       </div>
       <div class="uses">
         <article class="use rv"><h3>Your prescription</h3><p>See the prescription details your clinic recorded, with your history kept in one organized place.</p></article>
-        <article class="use rv"><h3>Book a time that suits you</h3><p>Pick an open slot online. Your upcoming visits and the follow-up dates your clinic sets are listed together.</p></article>
+        <article class="use rv"><h3>Request a visit</h3><p>Ask for a date and time. The clinic confirms it or suggests another. Your upcoming visits and follow-up dates are listed together.</p></article>
         <article class="use rv"><h3>Reminders that reach you</h3><p>Get appointment and follow-up notices, and confirm a follow-up with a single tap.</p></article>
-        <article class="use rv"><h3>Missed a visit? Fix it in a minute</h3><p>Reschedule from your portal or dismiss the notice. Your appointment history stays on record either way.</p></article>
+        <article class="use rv"><h3>Missed a visit? Ask for a new time</h3><p>Send a new request, or dismiss the notice. Your appointment history stays on record either way.</p></article>
       </div>
     </div>
   </section>
@@ -177,7 +177,7 @@ footer .wrap>div{display:flex;flex-wrap:wrap;gap:24px 48px;justify-content:space
       <ol>
         <li class="rv"><h3>Create your account</h3><p>Sign up and confirm your email address. It takes about a minute.</p></li>
         <li class="rv"><h3>Get seen, stay informed</h3><p>After your visit, the clinic updates your prescription and schedules any follow-up.</p></li>
-        <li class="rv"><h3>Follow through</h3><p>Get a reminder, confirm it or reschedule, and keep your care on track.</p></li>
+        <li class="rv"><h3>Follow through</h3><p>Get a reminder, confirm it, and request a new time if you need one.</p></li>
       </ol>
     </div>
   </section>
@@ -187,8 +187,8 @@ footer .wrap>div{display:flex;flex-wrap:wrap;gap:24px 48px;justify-content:space
       <div class="head rv"><h2>Questions patients ask.</h2></div>
       <div class="faq rv">
         <details><summary>Is my information private?</summary><p>Accounts are email-verified, passwords can be reset by email and every form is protected against forged requests. Only you and your clinic team can see your record.</p></details>
-        <details><summary>What if I can’t make my appointment?</summary><p>Open your portal, reschedule to another available slot, or dismiss the notice. Your appointment history stays on record.</p></details>
-        <details><summary>Do I need an account to book?</summary><p>Yes. Creating one takes a minute: sign up, then confirm your email address. After that you can book, view your prescription and manage reminders.</p></details>
+        <details><summary>What if I can’t make my appointment?</summary><p>Send a new request from your portal or message the clinic, and staff will confirm another time. You can also dismiss the notice. Your appointment history stays on record.</p></details>
+        <details><summary>Do I need an account?</summary><p>An account lets you view your prescription, appointments and reminders and message the clinic. Sign up and confirm your email address. The clinic confirms every visit: send a request in the portal, walk in, or call.</p></details>
         <details><summary>Does the portal give medical advice?</summary><p>No. It supports clinic operations only. It does not diagnose, prescribe or check clinical accuracy. Your eye care professional does that at your visit.</p></details>
       </div>
     </div>

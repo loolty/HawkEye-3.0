@@ -11,7 +11,7 @@
 <section class="card">
   {% for x in rows %}
   <article class="reminder-item" style="padding:var(--s-4) 0">
-    <div class="actions" style="justify-content:space-between"><h3 style="margin:0">{% if x.appointment_id %}Appointment reminder{% else %}Message from the clinic{% endif %}</h3><span class="badge {{ 'Read' if x.read_status=='Read' else '' }}">{{x.read_status}}</span></div>
+    <div class="actions" style="justify-content:space-between"><h3 style="margin:0">{% if x.status=='Notice' %}Update on your request{% elif x.appointment_id %}Appointment reminder{% else %}Message from the clinic{% endif %}</h3><span class="badge {{ 'Read' if x.read_status=='Read' else '' }}">{{x.read_status}}</span></div>
     <p class="muted small" style="margin:2px 0 8px">Sent {{x.sent_date}}{% if 'Email' in x.channel and 'failed' not in x.channel %} · also emailed to you{% endif %}</p>
     <p>{{x.message}}</p>
     {% if x.read_status!='Read' %}<form method="post" action="{{url_for('reminder_read',rid=x.id)}}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn">Mark as read</button></form>{% endif %}

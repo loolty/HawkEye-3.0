@@ -1,6 +1,6 @@
 # HawkEye Optical Clinic
 
-A web-based clinic management and patient portal system for an optical clinic. Staff manage patients, prescriptions, appointments, follow-ups and reminders across one or more branches, while patients book appointments, view their prescriptions, receive reminders and message the clinic, all from the browser.
+A web-based clinic management and patient portal system for an optical clinic. Staff manage patients, prescriptions, appointments, follow-ups and reminders across one or more branches, while patients view their prescriptions and appointments, receive reminders and message the clinic, all from the browser. Patients can **request** an appointment but never book one: **only clinic staff confirm or book a time**.
 
 Built with **Flask** and **MySQL / MariaDB**. Runs locally with XAMPP and deploys to a Linux or Windows server behind HTTPS.
 
@@ -31,9 +31,9 @@ Built with **Flask** and **MySQL / MariaDB**. Runs locally with XAMPP and deploy
 
 ### Patient portal
 - Sign up with email verification, or sign in / sign up with **Google**
-- Book, view, reschedule and cancel appointments (Eye check, Follow-up, Prescription review) with live slot availability
+- **Request an appointment** (preferred date, time and reason). A request does not reserve a slot: the clinic confirms or rejects it and the patient is told under Reminders. One open request at a time, which the patient can withdraw
 - View current prescription and history
-- In-app **Reminders** with unread badge; acknowledge follow-ups, or reschedule / dismiss missed appointments
+- In-app **Reminders** with unread badge; acknowledge follow-ups, request a new time, or dismiss missed appointments
 - **Two-way clinic chat** with staff
 - Profile, email change, password reset, and optional **two-step sign-in**
 
@@ -41,7 +41,7 @@ Built with **Flask** and **MySQL / MariaDB**. Runs locally with XAMPP and deploy
 - **Dashboard** with KPIs, an urgent list (with Resolve action) and a clinic snapshot
 - **Patients** directory, walk-in registration, record editing and prescription history
 - **Prescriptions** with editable history records (editing updates the record rather than creating a duplicate)
-- **Appointments** and **Follow-ups**, with status changes and doctor assignment
+- **Appointments** and **Follow-ups**: staff book appointments (no double-booked slots), **Confirm or Reject patient requests**, change status and assign doctors
 - **Doctor Schedule**: hourly booked/free grid per doctor (08:00 to 17:59); optometrists see only their own
 - **Reminders**: sent to the patient's in-app Reminders page, and by email when an address exists
 - **Clinic Chat** with unread counts and a branch-scoped patient picker
@@ -49,13 +49,14 @@ Built with **Flask** and **MySQL / MariaDB**. Runs locally with XAMPP and deploy
 - **Administration** (Admin only): user management, access-request approval, branches, two-step reset, audit log
 
 ### Automation
-A background scheduler (APScheduler) runs three jobs:
+A background scheduler (APScheduler) runs four jobs:
 
 | Job | Frequency | Purpose |
 |---|---|---|
 | Appointment reminders | every 15 min | Emails patients about confirmed appointments about 24 hours away |
 | Prescription reminders | hourly | Reminds patients whose prescription review date is tomorrow |
 | Purge stale rows | every 6 hours | Removes expired rate-limit rows |
+| No-show check | every 15 min | Marks Pending or Confirmed appointments as **Missed** when they are still not attended `MISSED_GRACE_MINUTES` after their start time (default 120), and closes open patient requests whose requested time has passed |
 
 Each job is guarded by a database lock, so it is safe to run several worker processes.
 
@@ -242,7 +243,8 @@ All settings come from `.env`. Never commit or share this file.
 | `COOKIE_SECURE` | `true` when served over HTTPS |
 | `APP_BASE_URL` | Public address, used inside emailed links and the Google redirect URI |
 | `MYSQL_HOST` / `PORT` / `DATABASE` / `USER` / `PASSWORD` | Database connection |
-| `ENABLE_SCHEDULER` | `true` to run the reminder jobs |
+| `ENABLE_SCHEDULER` | `true` to run the reminder and no-show jobs |
+| `MISSED_GRACE_MINUTES` | Minutes after the start time before an un-attended visit is marked Missed (default `120`, minimum `30`) |
 | `ADMIN_EMAIL` / `ADMIN_PASSWORD` | First-run administrator (see below) |
 | `SEED_DEMO_ACCOUNTS` | `true` only on a local demo machine |
 | `GMAIL_ADDRESS` / `GMAIL_APP_PASSWORD` / `MAIL_DEFAULT_SENDER` | Optional email delivery |
@@ -292,7 +294,7 @@ Demo accounts with well-known passwords are **not** created by default.
 | **Admin** | All branches | Everything, including user management, branches, access requests, two-step reset, reports for all branches |
 | **Optometrist** | Own branch | Patients, prescriptions, appointments, own doctor schedule, chat, reminders |
 | **Clinic Staff** | Own branch | Patients, appointments, follow-ups, reminders, chat, reports for their branch |
-| **Patient** | Own record | Booking, prescriptions, reminders, chat, profile |
+| **Patient** | Own record | View appointments, send appointment requests (cannot book), prescriptions, reminders, chat, profile |
 
 Branch scoping is enforced server-side: staff cannot book for or view another branch's patients, and Admin-only routes return 403 for everyone else.
 
@@ -304,7 +306,9 @@ Branch scoping is enforced server-side: staff cannot book for or view another br
 - **Self-upgrading schema:** on startup the app adds any missing columns and tables, so existing databases upgrade automatically. `sql/create_database.sql` is for fresh installs.
 - **Audit trail:** significant actions are written to `audit_logs`. Resolving an urgent item hides it from the list but keeps the appointment and its log entry.
 - **Chat:** two-way, in-app only (no email or SMS). Both sides poll every few seconds, and sending also works without JavaScript. Patients are limited to 15 messages per minute and 1000 characters per message.
-- **Follow-ups:** scheduling a *Follow-up* or *Prescription review* creates an in-app reminder. Patients acknowledge it, or reschedule / dismiss a missed appointment. Missed appointments stay in history.
+- **Follow-ups:** scheduling a *Follow-up* or *Prescription review* creates an in-app reminder. Patients acknowledge it, or dismiss a missed appointment. Missed appointments stay in history.
+- **Requests, not bookings:** a patient sends a request (date, time within clinic hours, reason, notes). It is saved as **Requested** and **does not reserve the slot**, so staff can still book that time for someone else. Staff **Confirm** or **Reject** it from the Appointments page; confirming re-checks that the time is still free at that branch, and either way the patient is told under Reminders. A patient has one open request at a time (and at most 6 per hour) and can withdraw it. A request whose time passes without a reply is closed automatically as *Request expired*. Only staff can create confirmed appointments.
+- **No-shows:** staff should mark a patient **Attended** when they arrive. A Pending or Confirmed appointment that is still un-attended `MISSED_GRACE_MINUTES` after its start time is set to **Missed** automatically (and logged in the audit trail), so it lands on the dashboard's urgent list and in Reports. Staff can change the status back (for example to Attended) at any time. Confirmed visits from earlier days also count as overdue on the dashboard even if the scheduler is off.
 - **Health check:** `GET /healthz` for uptime monitors and load balancers.
 - **Privacy Notice:** served at `/privacy`, built from what the system stores.
 
@@ -338,7 +342,7 @@ python -m unittest tests.smoke_test -v
 python -m unittest tests.test_two_step_google -v
 ```
 
-Set `MYSQL_USER`, `MYSQL_PASSWORD` and `MYSQL_HOST` as well if they differ from the defaults. The suite covers production config checks, page access by role, security headers, brute-force lockouts, reset links, record linking, branch isolation, scheduler locks, email escaping and two-step sign-in.
+Set `MYSQL_USER`, `MYSQL_PASSWORD` and `MYSQL_HOST` as well if they differ from the defaults. The suite covers production config checks, page access by role, security headers, brute-force lockouts, reset links, record linking, branch isolation, scheduler locks, email escaping, two-step sign-in, appointment requests (no direct booking, one open request, slot re-check on confirm, withdraw and expiry) and the no-show automation.
 
 ---
 

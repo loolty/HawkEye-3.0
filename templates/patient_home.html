@@ -27,10 +27,10 @@
 {% else %}
 <section class="card visit empty" aria-labelledby="next-visit">
   <div class="visit-info">
-    <h2 id="next-visit">No visit booked</h2>
-    <p>Pick a branch, a day and a time. The clinic confirms your request.</p>
+    <h2 id="next-visit">No visit scheduled</h2>
+    <p>Ask for a date and time. The clinic confirms it or replies with another option.</p>
   </div>
-  <div class="actions"><a class="btn primary" href="{{url_for('patient_appointments')}}">Book a visit</a></div>
+  <div class="actions"><a class="btn primary" href="{{url_for('patient_appointments')}}#requestForm">Request a visit</a></div>
 </section>
 {% endif %}
 

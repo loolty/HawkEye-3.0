@@ -38,7 +38,7 @@
       </tr>
     {% endfor %}</tbody>
   </table></div>
-  {% else %}<div class="empty-state"><svg class="icon" aria-hidden="true"><use href="#i-calendar"/></svg><h3>Nothing in today’s queue</h3><p>New bookings appear here by themselves.</p></div>{% endif %}
+  {% else %}<div class="empty-state"><svg class="icon" aria-hidden="true"><use href="#i-calendar"/></svg><h3>Nothing in today’s queue</h3><p>New requests and bookings appear here by themselves.</p></div>{% endif %}
 </div>
 <div class="card dashboard-queue"><div class="section-heading"><div><h3>Needs a call or message</h3><p class="muted small">Patients who missed a visit, or whose request is still open after its date.</p></div><span class="badge Missed">{{urgent|length}} to follow up</span></div>
 {% if urgent %}<div class="table-wrap"><table class="sortable-table"><thead><tr><th>Patient</th><th>Visit</th><th>Date & time</th><th>Status</th><th>Contact</th></tr></thead><tbody>{% for u in urgent %}<tr><td><strong>{{u.name}}</strong><div class="muted small">{{u.code}}</div></td><td>{{u.type}}</td><td>{{u.date}} · {{u.time}}</td><td><span class="badge {{u.status}}">{{u.status}}</span></td><td><div class="row-actions"><form method="post" action="{{url_for('urgent_contact',pid=u.pid,channel='email')}}"><input type="hidden" name="csrf_token" value="{{csrf_token()}}"><input type="hidden" name="message" value="We noticed you missed or have an incomplete eye-care visit. Please contact HawkEye Optical Clinic to arrange your next visit."><button class="btn btn-small" {% if not u.email %}disabled title="No email saved"{% endif %}>Email</button></form><form method="post" action="{{url_for('urgent_contact',pid=u.pid,channel='chat')}}"><input type="hidden" name="csrf_token" value="{{csrf_token()}}"><input type="hidden" name="message" value="Hello {{u.name}}, HawkEye Optical Clinic would like to help you arrange your follow-up visit."><button class="btn btn-small">Website chat</button></form><form method="post" action="{{url_for('urgent_contact',pid=u.pid,channel='sms')}}"><input type="hidden" name="csrf_token" value="{{csrf_token()}}"><input type="hidden" name="message" value="HawkEye Optical Clinic: Please contact us to arrange your follow-up visit."><button class="btn btn-small">SMS prototype</button></form><form method="post" action="{{url_for('resolve_urgent_appointment',aid=u.appointment_id)}}"><input type="hidden" name="csrf_token" value="{{csrf_token()}}"><button class="btn primary btn-small">Resolve</button></form></div></td></tr>{% endfor %}</tbody></table></div>{% else %}<p class="muted" style="margin:0">Nobody to follow up right now.</p>{% endif %}</div>
@@ -56,7 +56,7 @@
       if (!response.ok) throw new Error('Dashboard update check failed');
       const data = await response.json();
       if (Number(data.latest_appointment_id) > knownId) {
-        status.textContent = 'New booking found, refreshing';
+        status.textContent = 'New request or booking found, refreshing';
         window.location.reload();
         return;
       }

@@ -143,7 +143,7 @@ After setup, test it: open **Forgot password** on the patient login page with yo
 - [ ] `import app` prints nothing (config is valid) and `/healthz` returns `{"status":"ok"}`.
 - [ ] Site opens on `https://` only; `http://` redirects; padlock shows no warnings.
 - [ ] Signed in as admin: **changed the admin password**, created staff accounts for real staff.
-- [ ] Walked through as a real patient: signup → verification email → sign in → book → staff confirms → reminder email → forgot-password → reset.
+- [ ] Walked through as a real patient: signup → verification email → sign in → patient sends an appointment request → staff confirms it → patient sees the confirmation under Reminders → reminder email → forgot-password → reset.
 - [ ] Wrong password 5 times locks the account for 15 minutes (and the message appears).
 - [ ] **Backup + restore drill:** run the backup, restore it into a spare database, and check the data (`gunzip -c backups/FILE.sql.gz | mysql spare_db`).
 - [ ] **Privacy Notice** (`/privacy`) reviewed by someone qualified for your country's data-protection law; the retention wording adjusted to your actual policy.
@@ -179,7 +179,7 @@ MYSQL_DATABASE=hawkeyes_test python -m unittest tests.smoke_test -v
 
 ## 9. What this does *not* include (be aware)
 
-- **Two-factor authentication** — passwords only (minimum 8 characters).
+- **Two-step sign-in is optional**, not enforced: staff and patients choose whether to turn it on (see the two-step section above). Passwords need at least 8 characters.
 - **Per-account lockout can be abused**: someone who knows a staff email can keep it locked (15 minutes at a time). That is the usual trade-off; the address-level limit and logs help you spot it.
 - Signed-in sessions cannot be revoked from the server side; they expire after 8 hours or on sign-out.
 - **Not load-tested.** It opens one database connection per request, which is fine for a clinic (dozens of simultaneous users); revisit if you grow far beyond that.
